@@ -5,7 +5,7 @@
 #include <list>
 #include <thread>
 
-#include <gfx/integrators/integrator.hpp>
+#include <gfx/integrator/integrator.hpp>
 #include <gfx/image.hpp>
 #include <gfx/scene.hpp>
 #include <utils/workerPool.hpp>

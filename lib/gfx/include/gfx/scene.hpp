@@ -2,8 +2,8 @@
 
 #include <vector>
 
-#include "shapes/shapes.hpp"
-#include "material.hpp"
+#include <gfx/shape/shapes.hpp>
+#include <gfx/material.hpp>
 
 namespace Gfx {
 

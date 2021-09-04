@@ -6,9 +6,9 @@
 #include <gfx/camera/filter.hpp>
 #include <gfx/definitions.hpp>
 #include <gfx/image.hpp>
-#include <gfx/integrators/integrator.hpp>
-#include <gfx/integrators/samplerWrapper.hpp>
-#include <gfx/samplers/whitter.hpp>
+#include <gfx/integrator/integrator.hpp>
+#include <gfx/integrator/samplerWrapper.hpp>
+#include <gfx/sampler/whitter.hpp>
 
 namespace Gfx {
 

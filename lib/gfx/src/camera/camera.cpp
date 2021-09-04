@@ -1,6 +1,6 @@
 #include <gfx/camera/camera.hpp>
-#include <gfx/integrators/samplerWrapper.hpp>
-#include <gfx/samplers/whitter.hpp>
+#include <gfx/integrator/samplerWrapper.hpp>
+#include <gfx/sampler/whitter.hpp>
 
 #include <imgui.h>
 #include <imgui-SFML.h>

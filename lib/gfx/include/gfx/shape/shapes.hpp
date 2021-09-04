@@ -4,9 +4,9 @@
 
 #include <variant>
 
-#include <gfx/shapes/aabox.hpp>
-#include <gfx/shapes/plane.hpp>
-#include <gfx/shapes/triangle.hpp>
+#include <gfx/shape/aabox.hpp>
+#include <gfx/shape/plane.hpp>
+#include <gfx/shape/triangle.hpp>
 
 namespace Gfx::Shape {
 
