@@ -8,7 +8,6 @@
 
 namespace Gfx {
 struct RenderOptions {
-    Math::Vector<size_t, 2> dimensions{0, 0};
     Real fovWidth = M_PI/2; //in radians
     Point position{0, 0, 0};
     //Point rotation{0, 0, 0};

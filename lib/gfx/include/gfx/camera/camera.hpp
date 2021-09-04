@@ -2,6 +2,8 @@
 
 #include <SFML/Graphics.hpp>
 
+#include <gfx/camera/body.hpp>
+#include <gfx/camera/filter.hpp>
 #include <gfx/concepts/integrator.hpp>
 #include <gfx/definitions.hpp>
 #include <gfx/image.hpp>
@@ -22,9 +24,9 @@ class Camera {
 
     void HandleEvent(const sf::Event &event);
 
-    void Update(sf::Time dt);
+    void Update(float dt);
 
-    void Render();
+    void Render(float frametime = 1.);
 
     static void IConvDefaultLERP(sf::Image &dst, const Gfx::Image &src);
 
@@ -59,8 +61,12 @@ class Camera {
     uint32_t setActions{0};
 
     Real cameraMass = 1.;
-    Point acceleration{0, 0, 0};
-    RenderOptions options{};
+    Real gravity = 9.86;
+    Point velocityVector{0, 0, 0};
+    CameraBodySFML cameraParticle{};
+    RenderOptions options{
+      .position{1, 1.5, -2}
+    };
 
     SamplerWrapperIntegrator<Sampler::Whitter> integrator{Sampler::Whitter{}};
 };

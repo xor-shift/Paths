@@ -8,7 +8,6 @@
 #pragma once
 
 #include <gfx/concepts/shape.hpp>
-#include <math/math.hpp>
 
 namespace Gfx::Shape {
 

@@ -2,14 +2,81 @@
 #include <SFML/Graphics.hpp>
 #include <imgui-SFML.h>
 
-#include "gfx/camera.hpp"
+#include "gfx/camera/camera.hpp"
 #include "gfx/scene.hpp"
 #include "gfx/image.hpp"
 #include "gfx/ray.hpp"
-#include "math/math.hpp"
+
+void TestChan() {
+    BufChan<int> chan(4);
+
+    chan << 1 << 2 << 3;
+
+    auto f1 = std::async(std::launch::async, [&chan]() {
+        for (;;) {
+            if (auto v = chan.Get(); v) fmt::print("Got value: {}\n", *v);
+            else {
+                fmt::print("Got no value\n");
+                break;
+            }
+
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+    });
+
+    auto f2 = std::async(std::launch::async, [&chan]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+        chan.Close();
+    });
+
+    for (int i = 4; i < 100; i++) {
+        if (!chan.Push(i)) {
+            fmt::print("Could not insert\n");
+            break;
+        } else fmt::print("Inserted {}\n", i);
+    }
+
+    f1.wait();
+    f2.wait();
+};
+
+/*
+void TestWorker() {
+    WorkerPool<size_t, size_t> worker([](size_t &&data) -> size_t {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        return data * data;
+    }, 4);
+
+    std::vector<std::future<size_t>> futures;
+
+    auto workerF = std::async(std::launch::async, [&worker] {
+        worker.Work(7); //starts 7 threads
+    });
+
+    auto closerF = std::async(std::launch::async, [&worker] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(3500));
+        worker.Close();
+    });
+
+    for (size_t i = 0; i < 16; i++) {
+        fmt::print("Queueing work for {}\n", i);
+        futures.emplace_back(worker.QueueWork(i));
+        fmt::print("Queued work for {}\n", i);
+    }
+
+    for (size_t i = 0; auto &future : futures) {
+        auto res = future.get();
+        fmt::print("Work result for {} is {}\n", i++, res);
+    }
+
+    workerF.wait();
+    closerF.wait();
+}
+*/
 
 int main() {
-    Gfx::Shape::AABox::PerfTest();
+    std::allocator<int> allocator;
+    std::vector<int> asd;
 
     auto scenePtr = std::make_shared<Gfx::Scene>();
 
@@ -43,13 +110,14 @@ int main() {
       };
 
     sf::RenderWindow window(sf::VideoMode{960, 540}, "asdasd");
-    window.setFramerateLimit(60);
+    window.setFramerateLimit(30);
     ImGui::SFML::Init(window);
 
     Gfx::Camera camera(window, {960, 540}, {0.f, 0.f});
     camera.SetScene(scenePtr);
 
     while (window.isOpen()) {
+        static sf::Clock frameClock{};
         static sf::Clock deltaClock{};
         static sf::Clock cameraClock{};
 
@@ -64,10 +132,10 @@ int main() {
         }
 
         ImGui::SFML::Update(window, deltaClock.restart());
-        camera.Update(cameraClock.restart());
+        camera.Update(cameraClock.restart().asSeconds());
         window.clear(sf::Color::Green);
 
-        camera.Render();
+        camera.Render(frameClock.restart().asSeconds());
 
         ImGui::SFML::Render(window);
         window.display();

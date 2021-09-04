@@ -8,7 +8,7 @@
 #include <chrono>
 
 #include <gfx/concepts/shape.hpp>
-#include <math/math.hpp>
+#include "maths/maths.hpp"
 
 namespace Gfx::Shape {
 

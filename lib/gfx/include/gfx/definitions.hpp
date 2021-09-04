@@ -1,6 +1,6 @@
 #pragma once
 
-#include "math/math.hpp"
+#include "maths/maths.hpp"
 
 #define LIBGFX_ENABLE_NORMAL_CHECKS
 

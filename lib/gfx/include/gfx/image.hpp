@@ -6,6 +6,8 @@ namespace Gfx {
 
 class Image {
   public:
+    Image() = default;
+
     explicit Image(Math::Vector<std::size_t, 2> dimensions, RGBSpectrum fill = {0,0,0})
         : dimensions(dimensions) {
         data = std::vector<RGBSpectrum>(dimensions[0] * dimensions[1], fill);
