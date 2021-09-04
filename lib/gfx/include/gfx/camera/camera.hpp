@@ -4,13 +4,45 @@
 
 #include <gfx/camera/body.hpp>
 #include <gfx/camera/filter.hpp>
-#include <gfx/concepts/integrator.hpp>
 #include <gfx/definitions.hpp>
 #include <gfx/image.hpp>
+#include <gfx/integrators/integrator.hpp>
 #include <gfx/integrators/samplerWrapper.hpp>
 #include <gfx/samplers/whitter.hpp>
 
 namespace Gfx {
+
+class ContinuousRenderer {
+  public:
+    ContinuousRenderer(std::shared_ptr<Scene> scene, unsigned int width, unsigned int height, const std::string &title);
+
+    ~ContinuousRenderer();
+
+    void Join();
+
+    void Quit();
+
+  private:
+    std::atomic_bool contRendering{true};
+    sf::RenderWindow window;
+    std::thread rendererThread{};
+
+    SamplerWrapperIntegrator<Sampler::Whitter> integrator{Sampler::Whitter{}};
+    std::shared_ptr<Scene> scene;
+
+    struct {
+        sf::Image image{};
+        sf::Texture texture{};
+        sf::Sprite sprite{};
+
+        void SetSprite() {
+            texture.loadFromImage(image);
+            sprite.setTexture(texture);
+        }
+    } intermediates;
+
+    CameraBodySFML cameraParticle{};
+};
 
 class Camera {
   public:

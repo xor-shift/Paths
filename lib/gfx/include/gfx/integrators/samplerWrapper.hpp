@@ -5,7 +5,7 @@
 #include <list>
 #include <thread>
 
-#include <gfx/concepts/integrator.hpp>
+#include <gfx/integrators/integrator.hpp>
 #include <gfx/image.hpp>
 #include <gfx/scene.hpp>
 #include <utils/workerPool.hpp>
@@ -41,25 +41,15 @@ class SamplerWrapperIntegrator {
     }
 
     Gfx::Image GetRender() {
-        const size_t newSegmentSize = 64;
-
-        const size_t nSegments = backBuffer.Height() / newSegmentSize;
-        const size_t excessSegments = backBuffer.Height() % newSegmentSize;
-
-        std::vector<std::future<void>> futures(nSegments);
-
-        for (size_t i = 0; i < nSegments; i++) {
-            const size_t start = i * newSegmentSize;
-            const size_t end = start + newSegmentSize + ((i + 1 == nSegments) ? excessSegments : 0);
-
-            futures[i] = workerPool.QueueWork(WorkItem{
+        workerPool.SplitWork(backBuffer.Height(), 8, [this](size_t start, size_t end) {
+            return WorkItem{
               .sampler = *this,
               .startRow = start,
               .endRow = end,
-            });
-        }
+            };
+        });
 
-        for (auto &future : futures) future.wait();
+        workerPool.WGWait();
 
         return backBuffer;
     }
@@ -107,7 +97,7 @@ class SamplerWrapperIntegrator {
         }
     }
 
-    WorkerPool<decltype(&SamplerWrapperIntegrator<Sampler>::Worker), WorkItem> workerPool;
+    WorkerPoolWG<decltype(&SamplerWrapperIntegrator<Sampler>::Worker), WorkItem> workerPool;
     std::thread workerThread;
 };
 

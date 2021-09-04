@@ -1,6 +1,6 @@
 #pragma once
 
-#include <gfx/concepts/integrator.hpp>
+#include "sampler.hpp"
 
 namespace Gfx::Sampler {
 

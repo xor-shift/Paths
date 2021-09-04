@@ -2,7 +2,6 @@
 
 #include <vector>
 
-#include "concepts/shape.hpp"
 #include "shapes/shapes.hpp"
 #include "material.hpp"
 

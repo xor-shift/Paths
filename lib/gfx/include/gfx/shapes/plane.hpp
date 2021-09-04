@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <gfx/concepts/shape.hpp>
+#include "shape.hpp"
 
 namespace Gfx::Shape {
 

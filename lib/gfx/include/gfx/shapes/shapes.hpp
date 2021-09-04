@@ -1,5 +1,7 @@
 #pragma once
 
+#include "shape.hpp"
+
 #include <variant>
 
 #include <gfx/shapes/aabox.hpp>
