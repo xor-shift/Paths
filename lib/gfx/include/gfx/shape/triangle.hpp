@@ -14,7 +14,6 @@ namespace Gfx::Shape {
 enum class TriangleCenterType {
     InCenter,
     Centroid, //center of mass
-    Excenter,
     Circumcenter,
     Orthocenter,
 };
@@ -91,8 +90,6 @@ struct TriangleImpl {
             return PVecCalc(a, b, c, vertices);
         } else if constexpr (type == TriangleCenterType::Centroid) {
             return PVecCalc(1, 1, 1, vertices);
-        } else if constexpr (type == TriangleCenterType::Excenter) {
-            return PVecCalc(-a, b, c, vertices);
         } else if constexpr (type == TriangleCenterType::Circumcenter) {
             return PVecCalc(
               a * a * (b * b + c * c - a * a),
