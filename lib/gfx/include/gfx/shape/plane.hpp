@@ -15,7 +15,7 @@ struct Plane {
         LIBGFX_NORMAL_CHECK(ray.direction);
         LIBGFX_NORMAL_CHECK(normal);
 
-        auto denom = normal.Dot(ray.direction);
+        const auto denom = normal.Dot(ray.direction);
 
         if (std::abs(denom) <= Epsilon) return std::nullopt;
 
@@ -28,11 +28,10 @@ struct Plane {
         };
     }
 
-    Point center{};
-    Point normal{};
+    const Point center{};
+    const Point normal{};
 
-    std::size_t matIndex{0};
-    constexpr static bool boundable = false;
+    const std::size_t matIndex{0};
 };
 
 }

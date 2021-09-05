@@ -10,7 +10,7 @@ namespace Gfx {
 ContinuousRenderer::ContinuousRenderer(std::shared_ptr<Scene> scene, unsigned int width, unsigned int height, const std::string &title)
   : window(sf::VideoMode{width, height}, title)
     , scene(scene) {
-    window.setFramerateLimit(60);
+    window.setFramerateLimit(240);
     ImGui::SFML::Init(window);
 
     intermediates.image.create(width, height);

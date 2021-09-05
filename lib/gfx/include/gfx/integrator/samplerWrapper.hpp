@@ -7,7 +7,7 @@
 
 #include <gfx/integrator/integrator.hpp>
 #include <gfx/image.hpp>
-#include <gfx/scene.hpp>
+#include <gfx/scene/scene.hpp>
 #include <utils/workerPool.hpp>
 
 namespace Gfx {

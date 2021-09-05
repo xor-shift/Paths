@@ -11,34 +11,43 @@
 
 namespace Gfx::Shape {
 
+enum class TriangleCenterType {
+    InCenter,
+    Centroid, //center of mass
+    Excenter,
+    Circumcenter,
+    Orthocenter,
+};
+
 template<bool parallelogram>
 struct TriangleImpl {
     explicit TriangleImpl(std::size_t matIndex, std::array<Point, 3> vertices)
       : vertices(vertices)
         , edges({vertices[1] - vertices[0], vertices[2] - vertices[0]})
         , normal(Math::Ops::Vector::Normalized(Math::Ops::Vector::Cross(edges[0], edges[1])))
+        , center(PVecCalcCenter(vertices))
         , matIndex(matIndex) {}
 
     [[nodiscard]] constexpr std::optional<Intersection> Intersect(const Ray &ray) const noexcept {
         LIBGFX_NORMAL_CHECK(ray.direction);
         LIBGFX_NORMAL_CHECK(normal);
 
-        auto h = Math::Ops::Vector::Cross(ray.direction, edges[1]);
-        auto a = edges[0].Dot(h);
+        const auto h = Math::Ops::Vector::Cross(ray.direction, edges[1]);
+        const auto a = edges[0].Dot(h);
 
         if (std::abs(a) <= Epsilon) return std::nullopt;
 
-        auto f = 1. / a;
+        const auto f = 1. / a;
 
-        auto s = ray.origin - vertices[0];
-        auto u = f * s.Dot(h);
+        const auto s = ray.origin - vertices[0];
+        const auto u = f * s.Dot(h);
         if (0. > u || u > 1.) return std::nullopt;
 
-        auto q = Math::Ops::Vector::Cross(s, edges[0]);
-        auto v = f * ray.direction.Dot(q);
+        const auto q = Math::Ops::Vector::Cross(s, edges[0]);
+        const auto v = f * ray.direction.Dot(q);
         if (0. > v || (parallelogram ? v > 1. : u + v > 1.)) return std::nullopt;
 
-        auto t = f * edges[1].Dot(q);
+        const auto t = f * edges[1].Dot(q);
         if (t <= Epsilon) return std::nullopt;
 
         return Intersection{
@@ -50,12 +59,56 @@ struct TriangleImpl {
         };
     }
 
-    std::array<Point, 3> vertices{};
-    std::array<Point, 2> edges{};
-    Point normal{};
+    //regular data
+    const std::array<Point, 3> vertices;
+    const std::array<Point, 2> edges;
+    const Point normal;
 
-    std::size_t matIndex{0};
-    constexpr static bool boundable = true;
+    //satisfy boundable
+    const Point center;
+
+    //satisfy Shape
+    const std::size_t matIndex;
+
+  private:
+    [[nodiscard]] static constexpr std::array<Real, 3> PVecKCalc(const std::array<Point, 3> &vertices) noexcept {
+        return {
+          (vertices[1] - vertices[2]).Magnitude(),
+          (vertices[2] - vertices[1]).Magnitude(),
+          (vertices[0] - vertices[1]).Magnitude(),
+        };
+    }
+
+    [[nodiscard]] static constexpr Point PVecCalc(Real wA, Real wB, Real wC, const std::array<Point, 3> &vertices) noexcept {
+        return (vertices[0] * wA + vertices[1] * wB + vertices[2] * wC) / (wA + wB + wC);
+    }
+
+    template<TriangleCenterType type = TriangleCenterType::Centroid>
+    [[nodiscard]] static constexpr Point PVecCalcCenter(const std::array<Point, 3> &vertices) {
+        const auto[a, b, c] = PVecKCalc(vertices);
+
+        if constexpr (type == TriangleCenterType::InCenter) {
+            return PVecCalc(a, b, c, vertices);
+        } else if constexpr (type == TriangleCenterType::Centroid) {
+            return PVecCalc(1, 1, 1, vertices);
+        } else if constexpr (type == TriangleCenterType::Excenter) {
+            return PVecCalc(-a, b, c, vertices);
+        } else if constexpr (type == TriangleCenterType::Circumcenter) {
+            return PVecCalc(
+              a * a * (b * b + c * c - a * a),
+              b * b * (c * c + a * a - b * b),
+              c * c * (a * a + b * b - c * c),
+              vertices);
+        } else if constexpr (type == TriangleCenterType::Orthocenter) {
+            return PVecCalc(
+              a * a * a * a - (b * b - c * c) * (b * b - c * c),
+              b * b * b * b - (c * c - a * a) * (c * c - a * a),
+              c * c * c * c - (a * a - b * b) * (a * a - b * b),
+              vertices);
+        } else {
+            static_assert(type != type, "Cannot calculate triangle center with the given type");
+        }
+    }
 };
 
 typedef TriangleImpl<false> Triangle;

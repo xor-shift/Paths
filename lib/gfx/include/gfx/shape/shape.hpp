@@ -2,6 +2,7 @@
 
 #include <concepts>
 #include <optional>
+#include <utility>
 
 #include <gfx/ray.hpp>
 
@@ -16,11 +17,16 @@ struct IntersectionOptions {
 
 template<typename T>
 concept Shape = requires(const T &s, const Ray &ray) {
-    { s.boundable } -> std::convertible_to<bool>;
     { s.matIndex } -> std::convertible_to<std::size_t>;
-    { s.Intersect(ray) } -> std::same_as<std::optional<Intersection>>;
+    { s.Intersect(ray) } -> std::convertible_to<std::optional<Intersection>>;
 } && requires(T &s) {
     true;
+};
+
+template<typename T>
+concept Boundable = requires(const T &s) {
+    { s.extents } -> std::convertible_to<std::pair<Point, Point>>;
+    { s.center } -> std::convertible_to<Point>;
 };
 
 }

@@ -1,1 +1,1 @@
-#include "gfx/scene.hpp"
+#include "gfx/scene/scene.hpp"

@@ -6,11 +6,12 @@
 
 namespace Gfx {
 
-typedef long double Real;
+typedef double Real;
 
 typedef Math::Vector<Real, 3> Point;
 
 static constexpr Real Epsilon = static_cast<Real>(0.0001);
+static constexpr Point EpsilonVector = Point{Epsilon, Epsilon, Epsilon};
 
 }
 

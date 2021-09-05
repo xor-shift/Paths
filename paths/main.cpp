@@ -3,7 +3,7 @@
 #include <imgui-SFML.h>
 
 #include "gfx/camera/camera.hpp"
-#include "gfx/scene.hpp"
+#include "gfx/scene/scene.hpp"
 #include "gfx/image.hpp"
 #include "gfx/ray.hpp"
 
@@ -35,9 +35,11 @@ int main() {
                                   Gfx::Point{2, 1, 1},
                                   Gfx::Point{1.5, 2, 1}})
       << Gfx::Shape::AABox{
-        .min = Gfx::Point{2, 2, 2},
-        .max = Gfx::Point{3, 3, 3},
-      };
+        Gfx::Point{2, 2, 2},
+        Gfx::Point{3, 3, 3},
+        0
+      }
+      << Gfx::Shape::Sphere({0, 0, -4}, 1., 0);
 
     Gfx::ContinuousRenderer renderer(scenePtr, 640, 480, "asdasd");
     renderer.Join();

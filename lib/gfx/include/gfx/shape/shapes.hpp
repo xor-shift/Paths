@@ -2,14 +2,15 @@
 
 #include "shape.hpp"
 
-#include <variant>
+#include "aabox.hpp"
+#include "plane.hpp"
+#include "sphere.hpp"
+#include "triangle.hpp"
 
-#include <gfx/shape/aabox.hpp>
-#include <gfx/shape/plane.hpp>
-#include <gfx/shape/triangle.hpp>
+#include <variant>
 
 namespace Gfx::Shape {
 
-typedef std::variant<AABox, Plane, Triangle> Shape;
+typedef std::variant<AABox, Plane, Triangle, Sphere> Shape;
 
 }

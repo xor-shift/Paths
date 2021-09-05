@@ -74,7 +74,7 @@ v2sOperatorFactory(/)
 
 #define v2vOperatorFactory(oper) \
 template<typename U> \
-[[nodiscard]] friend Vector operator oper (const Vector &lhs, const Vector<U, N> &rhs) noexcept { auto temp = lhs; temp oper##= rhs; return temp; }
+[[nodiscard]] constexpr friend Vector operator oper (const Vector &lhs, const Vector<U, N> &rhs) noexcept { auto temp = lhs; temp oper##= rhs; return temp; }
 
 v2vOperatorFactory(+)
 
