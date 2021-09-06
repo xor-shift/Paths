@@ -8,8 +8,11 @@
 
 namespace Gfx {
 struct RenderOptions {
-    Real fovWidth = M_PI/2; //in radians
+    Real fovWidth = M_PI / 2; //in radians
     Point position{0, 0, 0};
+    Math::Matrix<Real, 3, 3> rotation{{{1, 0, 0},
+                                        {0, 1, 0},
+                                        {0, 0, 1}}};
     //Point rotation{0, 0, 0};
 };
 }
@@ -18,7 +21,6 @@ namespace Gfx::Concepts {
 
 template<typename T>
 concept Sampler = requires(const T &s, const Ray &ray, const Scene &scene) {
-    { s.monteCarlo } -> std::convertible_to<bool>;
     { s.Sample(scene, ray) } -> std::same_as<RGBSpectrum>;
 };
 

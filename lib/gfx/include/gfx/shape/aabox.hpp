@@ -65,9 +65,9 @@ struct AABox {
 
                 auto p = isection.intersectionPoint - (extents.first + extents.second) * .5;
                 auto d = (extents.second - extents.first) * .5;
-                Real bias = 1.00000001;
+                Real bias = 1.000001;
 
-                isection.normal = Math::Ops::Vector::Normalized(Point{
+                isection.normal = Math::Normalized(Point{
                   std::floor(p[0] / d[0] * bias),
                   std::floor(p[1] / d[1] * bias),
                   std::floor(p[2] / d[2] * bias),

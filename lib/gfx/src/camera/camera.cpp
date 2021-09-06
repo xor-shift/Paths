@@ -98,6 +98,7 @@ ContinuousRenderer::ContinuousRenderer(std::shared_ptr<Scene> scene, unsigned in
             if (cameraParticle.TickSFML(dt.asSeconds(), 50.)) {
                 integrator.SetRenderOptions({
                                               .position{cameraParticle.position},
+                                              .rotation{cameraParticle.Rotation()},
                                             });
             }
 

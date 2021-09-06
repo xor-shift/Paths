@@ -23,7 +23,7 @@ struct TriangleImpl {
     explicit TriangleImpl(std::size_t matIndex, std::array<Point, 3> vertices)
       : vertices(vertices)
         , edges({vertices[1] - vertices[0], vertices[2] - vertices[0]})
-        , normal(Math::Ops::Vector::Normalized(Math::Ops::Vector::Cross(edges[0], edges[1])))
+        , normal(Math::Normalized(Math::Cross(edges[0], edges[1])))
         , center(PVecCalcCenter(vertices))
         , matIndex(matIndex) {}
 
@@ -31,22 +31,22 @@ struct TriangleImpl {
         LIBGFX_NORMAL_CHECK(ray.direction);
         LIBGFX_NORMAL_CHECK(normal);
 
-        const auto h = Math::Ops::Vector::Cross(ray.direction, edges[1]);
-        const auto a = edges[0].Dot(h);
+        const auto h = Math::Cross(ray.direction, edges[1]);
+        const auto a = Math::Dot(edges[0], h);
 
         if (std::abs(a) <= Epsilon) return std::nullopt;
 
         const auto f = 1. / a;
 
         const auto s = ray.origin - vertices[0];
-        const auto u = f * s.Dot(h);
+        const auto u = f * Math::Dot(s, h);
         if (0. > u || u > 1.) return std::nullopt;
 
-        const auto q = Math::Ops::Vector::Cross(s, edges[0]);
-        const auto v = f * ray.direction.Dot(q);
+        const auto q = Math::Cross(s, edges[0]);
+        const auto v = f * Math::Dot(ray.direction, q);
         if (0. > v || (parallelogram ? v > 1. : u + v > 1.)) return std::nullopt;
 
-        const auto t = f * edges[1].Dot(q);
+        const auto t = f * Math::Dot(edges[1], q);
         if (t <= Epsilon) return std::nullopt;
 
         return Intersection{
@@ -72,9 +72,9 @@ struct TriangleImpl {
   private:
     [[nodiscard]] static constexpr std::array<Real, 3> PVecKCalc(const std::array<Point, 3> &vertices) noexcept {
         return {
-          (vertices[1] - vertices[2]).Magnitude(),
-          (vertices[2] - vertices[1]).Magnitude(),
-          (vertices[0] - vertices[1]).Magnitude(),
+          Math::Magnitude(vertices[1] - vertices[2]),
+          Math::Magnitude(vertices[2] - vertices[1]),
+          Math::Magnitude(vertices[0] - vertices[1]),
         };
     }
 

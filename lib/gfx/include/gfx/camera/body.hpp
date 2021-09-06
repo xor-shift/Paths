@@ -51,7 +51,7 @@ class CameraBody {
 
     /**
      * Input new orientation in [yaw, pitch, roll]
-     * Not a dumb setter, will make a rotation matrix aswell
+     * Not a dumb setter, will create a rotation matrix as well
      * @param orient The new orientation
      */
     void Orientation(Point orient) {
@@ -73,8 +73,8 @@ class CameraBody {
   private:
     std::pair<Real, Real> muSK{0., 0.06};
 
-    Point orientation{0, 0, 1};
-    Math::Matrix<Real, 3, 3> rotationMatrix{};
+    Point orientation{0, 0, 0};
+    Math::Matrix<Real, 3, 3> rotationMatrix{{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
 
     Environment environment{
       .gravity = 9.80665,
@@ -109,8 +109,8 @@ class CameraBody {
 
         if (!ClampVelocity()) { return; }
 
-        Point applyDirection = -Math::Ops::Vector::Normalized(velocity);
-        applyDirection *= std::min(velocity.Magnitude(), maxVDelta);
+        Point applyDirection = -Math::Normalized(velocity);
+        applyDirection *= std::min(Math::Magnitude(velocity), maxVDelta);
 
         velocity += applyDirection;
     }
@@ -119,7 +119,7 @@ class CameraBody {
         if (!HaveVelocity()) return;
 
         //Fd = 0.5 * rho * v^2 * cd * A
-        auto absV = velocity.Magnitude();
+        const auto absV = Math::Magnitude(velocity);
 
         auto force = 0.5
                      * environment.density
@@ -127,7 +127,7 @@ class CameraBody {
                      * properties.dragCoefficient
                      * properties.projectedArea;
 
-        velocity -= Math::Ops::Vector::Normalized(velocity) * (force * dt / properties.mass);
+        velocity -= Math::Normalized(velocity) * (force * dt / properties.mass);
     }
 };
 
@@ -141,8 +141,8 @@ class CameraBodySFML : public CameraBody {
       sf::Keyboard::LShift,
       sf::Keyboard::Space,
       sf::Keyboard::Up,
-      sf::Keyboard::Left,
       sf::Keyboard::Down,
+      sf::Keyboard::Left,
       sf::Keyboard::Right,
     }) {
         Point inputVector{0};
@@ -154,11 +154,22 @@ class CameraBodySFML : public CameraBody {
         inputVector[1] -= sf::Keyboard::isKeyPressed(keybindings[4]);
         inputVector[1] += sf::Keyboard::isKeyPressed(keybindings[5]);
 
+        static constexpr Real rotDegPS = M_PI * 0.2;
+        const Real rotDeg = rotDegPS * dt;
+
+        Point orient{0};
+        orient[1] -= rotDeg * sf::Keyboard::isKeyPressed(keybindings[6]);
+        orient[1] += rotDeg * sf::Keyboard::isKeyPressed(keybindings[7]);
+        orient[0] -= rotDeg * sf::Keyboard::isKeyPressed(keybindings[8]);
+        orient[0] += rotDeg * sf::Keyboard::isKeyPressed(keybindings[9]);
+        Orient(orient);
+
         if (!(inputVector[0] == 0 && inputVector[1] == 0 && inputVector[2] == 0)) {
-            inputVector = Math::Ops::Vector::Normalized(inputVector) * force;
+            inputVector = Math::Normalized(inputVector) * force;
+            inputVector = Math::Ops::MatVec::MatVecMult(Rotation(), inputVector);
         }
 
-        return CameraBody::Tick(dt, inputVector);
+        return CameraBody::Tick(dt, inputVector) || (orient[0] != 0 || orient[1] != 0 || orient[2] != 0);
     }
 
   private:

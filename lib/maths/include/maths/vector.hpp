@@ -1,6 +1,9 @@
 #pragma once
 
 #include <cmath>
+#include <fmt/format.h>
+
+#include <utils/ptrIterator.hpp>
 
 namespace Math {
 
@@ -8,6 +11,14 @@ template<typename T, size_t N>
 class Vector {
   public:
     T data[N];
+
+    [[nodiscard]] auto begin() & noexcept { return PtrIterator<T, N>(data); }
+
+    [[nodiscard]] auto end() & noexcept { return PtrIterator<T, N>(data, N); }
+
+    [[nodiscard]] auto cbegin() const & noexcept { return PtrIterator<const T, N>(data); }
+
+    [[nodiscard]] auto cend() const & noexcept { return PtrIterator<const T, N>(data, N); }
 
     template<typename U, U ...Vs>
     constexpr static Vector FromISequence(std::integer_sequence<U, Vs...> seq) requires (seq.size() == N) { return {static_cast<T>(Vs)...}; }
@@ -40,35 +51,35 @@ for (std::size_t i = 0; i < N; i++) data[i] oper##= other[i]; \
 return *this; \
 }
 
-v2vAssignEqualsFactory(+)
+    v2vAssignEqualsFactory(+)
 
-v2vAssignEqualsFactory(-)
+    v2vAssignEqualsFactory(-)
 
-v2vAssignEqualsFactory(*)
+    v2vAssignEqualsFactory(*)
 
-v2vAssignEqualsFactory(/)
+    v2vAssignEqualsFactory(/)
 
 #undef v2vAssignEqualsFactory
 
-template<typename U>
-constexpr Vector<T, N> &operator*=(U scalar) noexcept requires Multipliable<T, U> {
-    std::transform(data, data + N, data, [scalar](T v) { return v * scalar; });
-    return *this;
-}
+    template<typename U>
+    constexpr Vector<T, N> &operator*=(U scalar) noexcept requires Multipliable<T, U> {
+        std::transform(data, data + N, data, [scalar](T v) { return v * scalar; });
+        return *this;
+    }
 
-template<typename U>
-constexpr Vector<T, N> &operator/=(U scalar) noexcept requires Divisible<T, U> {
-    std::transform(data, data + N, data, [scalar](T v) { return v / scalar; });
-    return *this;
-}
+    template<typename U>
+    constexpr Vector<T, N> &operator/=(U scalar) noexcept requires Divisible<T, U> {
+        std::transform(data, data + N, data, [scalar](T v) { return v / scalar; });
+        return *this;
+    }
 
 #define v2sOperatorFactory(oper) \
 template<typename U>         \
 [[nodiscard]] friend Vector operator oper (const Vector &lhs, U scalar) { auto temp = lhs; temp oper##= scalar; return temp; }
 
-v2sOperatorFactory(*)
+    v2sOperatorFactory(*)
 
-v2sOperatorFactory(/)
+    v2sOperatorFactory(/)
 
 #undef v2sOperatorFactory
 
@@ -76,120 +87,96 @@ v2sOperatorFactory(/)
 template<typename U> \
 [[nodiscard]] constexpr friend Vector operator oper (const Vector &lhs, const Vector<U, N> &rhs) noexcept { auto temp = lhs; temp oper##= rhs; return temp; }
 
-v2vOperatorFactory(+)
+    v2vOperatorFactory(+)
 
-v2vOperatorFactory(-)
+    v2vOperatorFactory(-)
 
-v2vOperatorFactory(*)
+    v2vOperatorFactory(*)
 
-v2vOperatorFactory(/)
+    v2vOperatorFactory(/)
 
 #undef v2vOperatorFactory
 
-Vector operator-() const noexcept {
-    Vector v{};
-    for (size_t i = 0; i < N; i++) v[i] = -data[i];
+    Vector operator-() const noexcept {
+        Vector v{};
+        for (size_t i = 0; i < N; i++) v[i] = -data[i];
+        return v;
+    }
+};
+
+template<typename T, typename U, size_t N>
+static inline constexpr T Dot(const Vector<T, N> &lhs, const Vector<U, N> &rhs) noexcept {
+    T sum = 0.;
+    for (std::size_t i = 0; i < N; i++) sum += lhs[i] * rhs[i];
+    return sum;
+}
+
+template<typename T, size_t N>
+static inline constexpr T Magnitude(const Vector<T, N> &vec) noexcept { return std::sqrt(Dot(vec, vec)); }
+
+template<typename T, size_t N>
+static inline constexpr Vector<T, N> Normalized(const Vector<T, N> &vec) noexcept { return vec / Magnitude(vec); }
+
+template<typename T, size_t N, T errorMargin = 0.00001L>
+static inline constexpr Vector<T, N> IsNormalized(const Vector<T, N> &vec) noexcept { return std::abs(Magnitude(vec) - T(1)) <= errorMargin; }
+
+template<typename T, typename U>
+static inline constexpr Vector<T, 3> Cross(const Vector<T, 3> &lhs, const Vector<U, 3> &rhs) noexcept {
+    return {
+      lhs[1] * rhs[2] - lhs[2] * rhs[1],
+      lhs[2] * rhs[0] - lhs[0] * rhs[2],
+      lhs[0] * rhs[1] - lhs[1] * rhs[0],
+    };
+}
+
+template<typename T, std::size_t N>
+constexpr T MinElem(const Vector<T, N> &vec) noexcept {
+    T v = std::numeric_limits<T>::max();
+    for (std::size_t i = 0; i < N; i++) v = std::min(v, vec[i]);
     return v;
 }
 
-template<bool isConst = false>
-  class VectorIterator {
-      public:
-        constexpr VectorIterator() noexcept
-        : idx(N) {}
+template<typename T, std::size_t N>
+constexpr T MaxElem(const Vector<T, N> &vec) noexcept {
+    T v = std::numeric_limits<T>::min();
+    for (std::size_t i = 0; i < N; i++) v = std::max(v, vec[i]);
+    return v;
+}
 
-        constexpr ~VectorIterator() noexcept = default;
+namespace Impl {
+template<typename T, typename U, std::size_t N, typename BinaryCallback>
+constexpr Vector<T, N> BinaryConvolve(const Vector<T, N> &lhs, const Vector<U, N> &rhs, BinaryCallback &&fn) noexcept {
+    Vector<T, N> out{};
+    for (std::size_t i = 0; i < N; i++) out[i] = std::invoke(fn, lhs[i], rhs[i]);
+    return out;
+}
+}
 
-        explicit constexpr VectorIterator(Vector<T, N> &vec) noexcept
-        : data(&vec.data[0]), cData(&vec.data[0]) {}
+template<typename T, typename U, std::size_t N>
+constexpr Vector<T, N> MinPerElem(const Vector<T, N> &lhs, const Vector<U, N> &rhs) noexcept { return Impl::BinaryConvolve(lhs, rhs, [](auto l, auto r) { return std::min(l, r); }); }
 
-        explicit constexpr VectorIterator(const Vector<T, N> &vec) noexcept
-        : cData(&vec.data[0]) {}
+template<typename T, typename U, std::size_t N>
+constexpr Vector<T, N> MaxPerElem(const Vector<T, N> &lhs, const Vector<U, N> &rhs) noexcept { return Impl::BinaryConvolve(lhs, rhs, [](auto l, auto r) { return std::max(l, r); }); }
 
-        template<bool isOtherConst = false>
-          constexpr friend bool operator==(VectorIterator &lhs, VectorIterator<isOtherConst> &rhs) noexcept {
-            return lhs.idx == rhs.idx;
-        }
+}
 
-        constexpr VectorIterator &operator++() noexcept {
-            ++idx;
-            return *this;
-        }
-
-        constexpr const VectorIterator operator++(int) noexcept {
-            auto a = *this;
-            ++idx;
-            return a;
-        }
-
-        constexpr VectorIterator &operator--() noexcept {
-            --idx;
-            return *this;
-        }
-
-        constexpr const VectorIterator operator--(int) noexcept {
-            auto a = *this;
-            --idx;
-            return a;
-        }
-
-        constexpr const T &operator*() const & noexcept { return cData[idx]; }
-
-        constexpr T &operator*() & noexcept requires (!isConst) { return data[idx]; }
-
-        constexpr T &&operator*() && noexcept requires (!isConst) { return std::move(data[idx]); }
-
-      private:
-        T *data{nullptr};
-        const T *cData{nullptr};
-        std::size_t idx{0};
-    };
-
-    VectorIterator(const Vector<T, N> &vec) -> VectorIterator<true>;
-    VectorIterator(Vector<T, N> &vec) -> VectorIterator<false>;
-
-    VectorIterator<false> begin() { return VectorIterator(*this); }
-
-    VectorIterator<true> cbegin() const { return VectorIterator(*this); }
-
-    VectorIterator<false> end() { return VectorIterator<false>(); }
-
-    VectorIterator<true> cend() const { return VectorIterator<true>(); }
-
-    template<typename U>
-    constexpr T Dot(const Vector<U, N> &other) const {
-        T sum = 0.;
-        for (std::size_t i = 0; i < N; i++) sum += data[i] * other.data[i];
-        return sum;
+template<typename T, std::size_t N>
+struct fmt::formatter<Math::Vector<T, N>> {
+    template<typename ParseContext>
+    constexpr auto parse(ParseContext &ctx) {
+        return ctx.begin();
     }
 
-    template<typename U>
-    constexpr Vector &Cross(const Vector<U, 3> &other) noexcept requires (N == 3) {
-        T tempData[N]{
-            data[0] * other[2] - data[2] * other[1],
-            data[2] * other[0] - data[0] * other[2],
-            data[0] * other[1] - data[1] * other[0],
-            };
-
-        data[0] = tempData[0];
-        data[1] = tempData[1];
-        data[2] = tempData[2];
-
-        return *this;
+    template<typename FormatContext>
+    constexpr auto format(const Math::Vector<T, N> &vec, FormatContext &ctx) -> decltype(ctx.out()) {
+        return FormatInserter<decltype(ctx.out()), 0>(vec, fmt::format_to(ctx.out(), "("));
     }
 
-    constexpr T Magnitude() const noexcept {
-        return std::sqrt(Dot(*this));
-    }
-
-    constexpr Vector<T, N> &Normalize() noexcept { return *this /= Magnitude(); }
-
-    [[nodiscard]] bool IsNormalized() const noexcept {
-        constexpr T errorMargin = 0.001;
-        auto amount = std::abs(Magnitude() - 1.);
-        return amount <= errorMargin;
+  private:
+    template<typename C, std::size_t i = 0>
+    [[nodiscard]] constexpr C FormatInserter(const Math::Vector<T, N> &vec, C o) {
+        if constexpr (i >= N) return o;
+        else return FormatInserter<C, i + 1>(vec, fmt::format_to(o, (i + 1 == N) ? "{})" : "{}, ", vec[i]));
     }
 
 };
-
-}

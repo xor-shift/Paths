@@ -74,7 +74,7 @@ constexpr RGBSpectrum SpectrumToRGB(const Spectrum &spectrum) {
 
     for (std::size_t i = 0; i < Impl::colorWeights.size(); i++) {
         auto tempSpectrum = spectrum * Impl::colorWeights[i];
-        ret[i] = std::reduce(Impl::spectrumReductionPolicy, tempSpectrum.cbegin(), tempSpectrum.cend(), static_cast<Real>(1), std::multiplies<>());
+        ret[i] = std::reduce(Impl::spectrumReductionPolicy, tempSpectrum.data, tempSpectrum.data, static_cast<Real>(1), std::multiplies<>());
     }
 
     return ret;

@@ -31,12 +31,12 @@ int main() {
         .normal = Gfx::Point{0, 1, 0},
         .matIndex = 1,
       }
-      << Gfx::Shape::Triangle(0, {Gfx::Point{1, 1, 1},
-                                  Gfx::Point{2, 1, 1},
-                                  Gfx::Point{1.5, 2, 1}})
+      << Gfx::Shape::Triangle(0, {Gfx::Point{0, 2, 1},
+                                  Gfx::Point{1, 2, 1},
+                                  Gfx::Point{.5, 3, 2}})
       << Gfx::Shape::AABox{
-        Gfx::Point{2, 2, 2},
-        Gfx::Point{3, 3, 3},
+        Gfx::Point{0, 1, 0},
+        Gfx::Point{1, 2, 1},
         0
       }
       << Gfx::Shape::Sphere({0, 0, -4}, 1., 0);

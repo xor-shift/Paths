@@ -16,9 +16,9 @@ struct Sphere {
         const auto temp = ray.origin - center;
 
         const Real
-          a = Math::Ops::Vector::Dot(ray.direction, ray.direction),
-          b = 2. * Math::Ops::Vector::Dot(temp, ray.direction),
-          c = Math::Ops::Vector::Dot(temp, temp) - radius * radius;
+          a = Math::Dot(ray.direction, ray.direction),
+          b = 2. * Math::Dot(temp, ray.direction),
+          c = Math::Dot(temp, temp) - radius * radius;
 
         const Real disc = b * b - a * c * 4.;
         if (disc < 0) return std::nullopt;
@@ -41,7 +41,7 @@ struct Sphere {
         };
 
         isect.ComputeIntersectionPoint();
-        isect.normal = Math::Ops::Vector::Normalized(isect.intersectionPoint - center);
+        isect.normal = Math::Normalized(isect.intersectionPoint - center);
 
         isect.uv = {
           0.5 + std::atan2(isect.normal[0], isect.normal[2]) * 0.5 * M_1_PI,

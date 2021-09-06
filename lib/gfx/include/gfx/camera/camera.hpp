@@ -27,7 +27,7 @@ class ContinuousRenderer {
     sf::RenderWindow window;
     std::thread rendererThread{};
 
-    SamplerWrapperIntegrator<Sampler::Whitter> integrator{Sampler::Whitter{}};
+    SamplerWrapperIntegrator<Sampler::Whitted> integrator{Sampler::Whitted{}};
     std::shared_ptr<Scene> scene;
 
     struct {
@@ -100,7 +100,7 @@ class Camera {
       .position{1, 1.5, -2}
     };
 
-    SamplerWrapperIntegrator<Sampler::Whitter> integrator{Sampler::Whitter{}};
+    SamplerWrapperIntegrator<Sampler::Whitted> integrator{Sampler::Whitted{}};
 };
 
 }

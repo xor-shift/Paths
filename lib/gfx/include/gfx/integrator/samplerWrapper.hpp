@@ -8,6 +8,7 @@
 #include <gfx/integrator/integrator.hpp>
 #include <gfx/image.hpp>
 #include <gfx/scene/scene.hpp>
+#include <maths/matvec.hpp>
 #include <utils/workerPool.hpp>
 
 namespace Gfx {
@@ -86,7 +87,7 @@ class SamplerWrapperIntegrator {
                 rayY -= static_cast<Real>(backBuffer.Height()) / 2.;
 
                 Ray ray(renderOptions.position,
-                        Math::Ops::Vector::Normalized(Point{rayX, rayY, d}));
+                        Math::Ops::MatVec::MatVecMult(renderOptions.rotation, Math::Normalized(Point{rayX, rayY, d})));
 
                 backBuffer.At({x, row}) = sampler.Sample(*scene, ray);
             }

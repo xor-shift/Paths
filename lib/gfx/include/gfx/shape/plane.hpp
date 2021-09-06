@@ -15,13 +15,13 @@ struct Plane {
         LIBGFX_NORMAL_CHECK(ray.direction);
         LIBGFX_NORMAL_CHECK(normal);
 
-        const auto denom = normal.Dot(ray.direction);
+        const auto denom = Math::Dot(normal, ray.direction);
 
         if (std::abs(denom) <= Epsilon) return std::nullopt;
 
         return Intersection{
             .theRay = ray,
-            .distance = (center - ray.origin).Dot(normal) / denom,
+            .distance = Math::Dot(center - ray.origin, normal) / denom,
             .normal = normal,
             .matIndex = matIndex,
             .uv = {0, 0},
