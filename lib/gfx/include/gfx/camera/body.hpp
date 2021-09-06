@@ -45,9 +45,9 @@ class CameraBody {
 
     void SetProperties(Properties v) { this->properties = v; }
 
-    Point velocity{0};
+    Point velocity{{0}};
 
-    Point position{0};
+    Point position{{0}};
 
     /**
      * Input new orientation in [yaw, pitch, roll]
@@ -73,7 +73,7 @@ class CameraBody {
   private:
     std::pair<Real, Real> muSK{0., 0.06};
 
-    Point orientation{0, 0, 0};
+    Point orientation{{0, 0, 0}};
     Math::Matrix<Real, 3, 3> rotationMatrix{{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
 
     Environment environment{
@@ -85,7 +85,7 @@ class CameraBody {
 
     [[nodiscard]] bool ClampVelocity() {
         if (!HaveVelocity()) {
-            velocity = {0};
+            velocity = {{0}};
             return false;
         }
 
@@ -93,21 +93,21 @@ class CameraBody {
     }
 
     [[nodiscard]] bool HaveVelocity() const {
-        return !std::all_of(velocity.data, velocity.data + velocity.size(), [](auto v) {
-            return std::abs(v) <= 0.01;
+        return std::any_of(velocity.data(), velocity.data() + velocity.size(), [](auto v) {
+            return std::abs(v) >= 0.01;
         });
     }
 
     void ProcessForce(Real dt, Point forceSince) {
         //f = ma, a = f/m, v = ft/m
-        velocity += forceSince * dt / properties.mass;
+        velocity += Point{forceSince * dt / properties.mass};
     }
 
     void ProcessFriction(Real dt) {
+        if (!ClampVelocity()) { return; }
+
         //f = mgk, v = ft/m, v = mgkt/m = gkt
         Real maxVDelta = environment.gravity * muSK.second * dt;
-
-        if (!ClampVelocity()) { return; }
 
         Point applyDirection = -Math::Normalized(velocity);
         applyDirection *= std::min(Math::Magnitude(velocity), maxVDelta);
@@ -145,7 +145,7 @@ class CameraBodySFML : public CameraBody {
       sf::Keyboard::Left,
       sf::Keyboard::Right,
     }) {
-        Point inputVector{0};
+        Point inputVector{{0}};
 
         inputVector[2] += sf::Keyboard::isKeyPressed(keybindings[0]);
         inputVector[0] -= sf::Keyboard::isKeyPressed(keybindings[1]);
@@ -157,19 +157,22 @@ class CameraBodySFML : public CameraBody {
         static constexpr Real rotDegPS = M_PI * 0.2;
         const Real rotDeg = rotDegPS * dt;
 
-        Point orient{0};
+        Point orient{{0}};
         orient[1] -= rotDeg * sf::Keyboard::isKeyPressed(keybindings[6]);
         orient[1] += rotDeg * sf::Keyboard::isKeyPressed(keybindings[7]);
         orient[0] -= rotDeg * sf::Keyboard::isKeyPressed(keybindings[8]);
         orient[0] += rotDeg * sf::Keyboard::isKeyPressed(keybindings[9]);
-        Orient(orient);
+        bool changedOrientation = (orient[0] != 0 || orient[1] != 0 || orient[2] != 0);
+        if (changedOrientation) {
+            Orient(orient);
+        }
 
         if (!(inputVector[0] == 0 && inputVector[1] == 0 && inputVector[2] == 0)) {
             inputVector = Math::Normalized(inputVector) * force;
             inputVector = Math::Ops::MatVec::MatVecMult(Rotation(), inputVector);
         }
 
-        return CameraBody::Tick(dt, inputVector) || (orient[0] != 0 || orient[1] != 0 || orient[2] != 0);
+        return CameraBody::Tick(dt, inputVector) || changedOrientation;
     }
 
   private:

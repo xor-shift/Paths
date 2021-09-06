@@ -86,10 +86,12 @@ class SamplerWrapperIntegrator {
                 Real rayY = static_cast<Real>(backBuffer.Height() - row);
                 rayY -= static_cast<Real>(backBuffer.Height()) / 2.;
 
-                Ray ray(renderOptions.position,
-                        Math::Ops::MatVec::MatVecMult(renderOptions.rotation, Math::Normalized(Point{rayX, rayY, d})));
+                Point normDir =  Math::Normalized(Point{{rayX, rayY, d}});
 
-                backBuffer.At({x, row}) = sampler.Sample(*scene, ray);
+                Ray ray(renderOptions.position,
+                        Math::Ops::MatVec::MatVecMult(renderOptions.rotation, normDir));
+
+                backBuffer.At({{x, row}}) = sampler.Sample(*scene, ray);
             }
         };
 

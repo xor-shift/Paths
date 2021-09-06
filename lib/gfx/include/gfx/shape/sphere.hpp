@@ -8,8 +8,8 @@ struct Sphere {
     constexpr Sphere(Point center, Real radius, size_t matIndex)
       : center(center)
         , radius(radius)
-        , extents(center - Point{radius, radius, radius},
-                  center + Point{radius, radius, radius})
+        , extents(center - Point{{radius, radius, radius}},
+                  center + Point{{radius, radius, radius}})
         , matIndex(matIndex) {}
 
     [[nodiscard]] constexpr std::optional<Intersection> Intersect(const Ray &ray) const noexcept {
@@ -43,10 +43,10 @@ struct Sphere {
         isect.ComputeIntersectionPoint();
         isect.normal = Math::Normalized(isect.intersectionPoint - center);
 
-        isect.uv = {
-          0.5 + std::atan2(isect.normal[0], isect.normal[2]) * 0.5 * M_1_PI,
-          0.5 - std::asin(isect.normal[1]) * M_1_PI,
-        };
+        isect.uv = {{
+                      0.5 + std::atan2(isect.normal[0], isect.normal[2]) * 0.5 * M_1_PI,
+                      0.5 - std::asin(isect.normal[1]) * M_1_PI,
+                    }};
 
         return isect;
     }

@@ -55,9 +55,9 @@ struct AABox {
             auto isection = Intersection{
               .theRay = ray,
               .distance = dist,
-              .normal = Point{0, 0, 0},
+              .normal = Point{{0, 0, 0}},
               .matIndex = matIndex,
-              .uv = {0, 0},
+              .uv = {{0, 0}},
             };
 
             isection.ComputeIntersectionPoint();
@@ -66,11 +66,11 @@ struct AABox {
             const auto d = (extents.first - extents.second) * .5;
             const Real bias = 1.000001;
 
-            isection.normal = Math::Normalized(Point{
-              std::trunc(p[0] / std::abs(d[0]) * bias),
-              std::trunc(p[1] / std::abs(d[1]) * bias),
-              std::trunc(p[2] / std::abs(d[2]) * bias),
-            });
+            isection.normal = Math::Normalized(Point{{
+                                                       std::trunc(p[0] / std::abs(d[0]) * bias),
+                                                       std::trunc(p[1] / std::abs(d[1]) * bias),
+                                                       std::trunc(p[2] / std::abs(d[2]) * bias),
+                                                     }});
 
             return isection;
         } else return std::nullopt;

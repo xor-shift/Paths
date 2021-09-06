@@ -46,7 +46,7 @@ class ContinuousRenderer {
 
 class Camera {
   public:
-    Camera(sf::RenderTarget &target, Math::Vector<size_t, 2> renderDimensions, Math::Vector<float, 2> renderPos = {0, 0});
+    Camera(sf::RenderTarget &target, Math::Vector<size_t, 2> renderDimensions, Math::Vector<float, 2> renderPos = {{0, 0}});
 
     ~Camera();
 
@@ -94,10 +94,10 @@ class Camera {
 
     Real cameraMass = 1.;
     Real gravity = 9.86;
-    Point velocityVector{0, 0, 0};
+    Point velocityVector{{0, 0, 0}};
     CameraBodySFML cameraParticle{};
     RenderOptions options{
-      .position{1, 1.5, -2}
+      .position{{1, 1.5, -2}}
     };
 
     SamplerWrapperIntegrator<Sampler::Whitted> integrator{Sampler::Whitted{}};

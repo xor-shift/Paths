@@ -11,7 +11,7 @@ typedef double Real;
 typedef Math::Vector<Real, 3> Point;
 
 static constexpr Real Epsilon = static_cast<Real>(0.0001);
-static constexpr Point EpsilonVector = Point{Epsilon, Epsilon, Epsilon};
+static constexpr Point EpsilonVector({Epsilon, Epsilon, Epsilon});
 
 }
 
@@ -19,7 +19,7 @@ static constexpr Point EpsilonVector = Point{Epsilon, Epsilon, Epsilon};
 
 #include <cassert>
 
-#define LIBGFX_NORMAL_CHECK(vec) assert((vec).IsNormalized())
+#define LIBGFX_NORMAL_CHECK(vec) assert(Math::IsNormalized(vec))
 
 #else
 

@@ -24,13 +24,13 @@ struct Material {
             } else if constexpr (std::is_same_v<A, Material::AlbedoUVFunc>) {
                 return a.uvFunc(uv);
             } else {
-                return RGBSpectrum{0, 0, 0};
+                return RGBSpectrum{{0, 0, 0}};
             }
         }, albedo);
     }
 
     const AlbedoType albedo;
-    const RGBSpectrum emittance{0, 0, 0};
+    const RGBSpectrum emittance{{0, 0, 0}};
     const Real metallic{0};
     const Real roughness{0};
 };

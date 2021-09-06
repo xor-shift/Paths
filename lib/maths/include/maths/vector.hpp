@@ -7,49 +7,208 @@
 
 namespace Math {
 
+namespace Impl {
+
 template<typename T, size_t N>
-class Vector {
-  public:
+struct Array {
+    typedef T data_type[N];
     T data[N];
 
-    [[nodiscard]] auto begin() & noexcept { return PtrIterator<T, N>(data); }
+    [[nodiscard]] constexpr T operator[](size_t idx) const noexcept { return data[idx]; }
 
-    [[nodiscard]] auto end() & noexcept { return PtrIterator<T, N>(data, N); }
+    [[nodiscard]] constexpr T &operator[](size_t idx) noexcept { return data[idx]; }
+};
 
-    [[nodiscard]] auto cbegin() const & noexcept { return PtrIterator<const T, N>(data); }
+template<typename T, typename E>
+struct VectorExpr {
+    typedef T value_type;
+    static constexpr size_t arraySize = E::arraySize;
 
-    [[nodiscard]] auto cend() const & noexcept { return PtrIterator<const T, N>(data, N); }
+    [[nodiscard]] constexpr size_t size() const noexcept { return static_cast<const E &>(*this).size(); }
 
-    template<typename U, U ...Vs>
-    constexpr static Vector FromISequence(std::integer_sequence<U, Vs...> seq) requires (seq.size() == N) { return {static_cast<T>(Vs)...}; }
+    [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept { return static_cast<const E &>(*this)[idx]; }
+};
 
-    template<typename U>
-    [[nodiscard]] constexpr explicit operator Vector<U, N>() const noexcept requires std::is_convertible_v<T, U> {
-        Vector<U, N> v{};
-        for (std::size_t i = 0; i < N; i++) v[i] = static_cast<U>(data[i]);
-        return v;
+template<typename E0, typename E1>
+struct VecSumExpr : public Impl::VectorExpr<typename E0::value_type, VecSumExpr<E0, E1>> {
+    typedef typename E0::value_type value_type;
+    static constexpr size_t arraySize = E0::arraySize;
+
+    const E0 &e0;
+    const E1 &e1;
+
+    constexpr VecSumExpr(const E0 &e0, const E1 &e1)
+      : e0(e0), e1(e1) {}
+
+    [[nodiscard]] constexpr size_t size() const noexcept { return e0.size(); }
+
+    [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept { return e0[idx] + e1[idx]; }
+};
+
+template<typename E0, typename E1>
+struct VecDiffExpr : public Impl::VectorExpr<typename E0::value_type, VecDiffExpr<E0, E1>> {
+    typedef typename E0::value_type value_type;
+    static constexpr size_t arraySize = E0::arraySize;
+
+    const E0 &e0;
+    const E1 &e1;
+
+    constexpr VecDiffExpr(const E0 &e0, const E1 &e1)
+      : e0(e0), e1(e1) {}
+
+    [[nodiscard]] constexpr size_t size() const noexcept { return e0.size(); }
+
+    [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept { return e0[idx] - e1[idx]; }
+};
+
+template<typename E0, typename E1>
+struct VecEWiseProductExpr : public Impl::VectorExpr<typename E0::value_type, VecEWiseProductExpr<E0, E1>> {
+    typedef typename E0::value_type value_type;
+    static constexpr size_t arraySize = E0::arraySize;
+
+    const E0 &e0;
+    const E1 &e1;
+
+    constexpr VecEWiseProductExpr(const E0 &e0, const E1 &e1)
+      : e0(e0), e1(e1) {}
+
+    [[nodiscard]] constexpr size_t size() const noexcept { return e0.size(); }
+
+    [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept { return e0[idx] * e1[idx]; }
+};
+
+template<typename E0>
+struct VecScalarProductExpr : public Impl::VectorExpr<typename E0::value_type, VecScalarProductExpr<E0>> {
+    typedef typename E0::value_type value_type;
+    static constexpr size_t arraySize = E0::arraySize;
+
+    const E0 &e0;
+    const value_type s;
+
+    constexpr VecScalarProductExpr(const E0 &e0, const value_type s)
+      : e0(e0), s(s) {}
+
+    [[nodiscard]] constexpr size_t size() const noexcept { return e0.size(); }
+
+    [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept { return e0[idx] * s; }
+};
+
+template<typename E0, typename E1>
+struct VecEWiseDivisionExpr : public Impl::VectorExpr<typename E0::value_type, VecEWiseDivisionExpr<E0, E1>> {
+    typedef typename E0::value_type value_type;
+    static constexpr size_t arraySize = E0::arraySize;
+
+    const E0 &e0;
+    const E1 &e1;
+
+    constexpr VecEWiseDivisionExpr(const E0 &e0, const E1 &e1)
+      : e0(e0), e1(e1) {}
+
+    [[nodiscard]] constexpr size_t size() const noexcept { return e0.size(); }
+
+    [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept { return e0[idx] / e1[idx]; }
+};
+
+template<typename E0>
+struct VecScalarDivisionExpr : public Impl::VectorExpr<typename E0::value_type, VecScalarDivisionExpr<E0>> {
+    typedef typename E0::value_type value_type;
+    static constexpr size_t arraySize = E0::arraySize;
+
+    const E0 &e0;
+    const value_type s;
+
+    constexpr VecScalarDivisionExpr(const E0 &e0, const value_type s)
+      : e0(e0), s(s) {}
+
+    [[nodiscard]] constexpr size_t size() const noexcept { return e0.size(); }
+
+    [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept { return e0[idx] / s; }
+};
+
+template<typename E0>
+struct VecNegationExpr : public Impl::VectorExpr<typename E0::value_type, VecNegationExpr<E0>> {
+    typedef typename E0::value_type value_type;
+    static constexpr size_t arraySize = E0::arraySize;
+
+    const E0 &e0;
+
+    constexpr VecNegationExpr(const E0 &e0)
+      : e0(e0) {}
+
+    [[nodiscard]] constexpr size_t size() const noexcept { return e0.size(); }
+
+    [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept { return -e0[idx]; }
+};
+
+template<typename E0, typename E1> requires (E0::arraySize == 3 && E1::arraySize == 3)
+struct VecCrossProduct : public Impl::VectorExpr<typename E0::value_type, VecCrossProduct<E0, E1>> {
+    typedef typename E0::value_type value_type;
+    static constexpr size_t arraySize = E0::arraySize;
+
+    const E0 &e0;
+    const E1 &e1;
+
+    constexpr VecCrossProduct(const E0 &e0, const E1 &e1)
+      : e0(e0), e1(e1) {}
+
+    [[nodiscard]] constexpr size_t size() const noexcept { return e0.size(); }
+
+    [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept {
+        if (idx == 0) return e0[1] * e1[2] - e0[2] * e1[1];
+        else if (idx == 1) return e0[2] * e1[0] - e0[0] * e1[2];
+        else return e0[0] * e1[1] - e0[1] * e1[0];
+    }
+};
+
+}
+
+template<typename T, size_t N>
+struct Vector : public Impl::VectorExpr<T, Vector<T, N>> {
+    typedef T value_type;
+    static constexpr size_t arraySize = N;
+    typedef Impl::Array<T, N> array_type;
+
+    array_type impl{0};
+
+    [[nodiscard]] auto begin() noexcept { return PtrIterator<T, N>(data()); }
+
+    [[nodiscard]] auto end() noexcept { return PtrIterator<T, N>(data(), N); }
+
+    [[nodiscard]] auto cbegin() const noexcept { return PtrIterator<const T, N>(data()); }
+
+    [[nodiscard]] auto cend() const noexcept { return PtrIterator<const T, N>(data(), N); }
+
+    operator const Impl::VectorExpr<T, Vector<T, N>> &() { return *this; }
+
+    constexpr Vector() noexcept = default;
+
+    template<typename E>
+    constexpr Vector(const Impl::VectorExpr<T, E> &expr) noexcept {
+        static_assert(Impl::VectorExpr<T, E>::arraySize == N);
+        for (size_t i = 0; i < N; i++)
+            impl[i] = expr[i];
     }
 
-    [[nodiscard]] constexpr std::size_t size() const noexcept { return N; }
+    constexpr Vector(array_type &&data) noexcept
+      : impl(std::forward<array_type>(data)) {}
 
-    [[nodiscard]] constexpr T operator[](std::size_t i) const & noexcept { return data[i]; }
+    constexpr Vector(const array_type &data) noexcept
+      : impl(data) {}
 
-    [[nodiscard]] constexpr T &operator[](std::size_t i) & noexcept { return data[i]; }
+    [[nodiscard]] constexpr size_t size() const noexcept { return N; }
 
-    [[nodiscard]] constexpr T &&operator[](std::size_t i) && noexcept { return std::move(data[i]); }
+    [[nodiscard]] constexpr T operator[](size_t idx) const noexcept { return impl[idx]; }
 
-    template<typename U>
-    [[nodiscard]] constexpr friend bool operator==(const Vector<T, N> &lhs, const Vector<U, N> &rhs) noexcept {
-        for (std::size_t i = 0; i < N; i++) if (lhs[i] != rhs[i]) return false;
-        return true;
-    }
+    [[nodiscard]] constexpr T &operator[](size_t idx) noexcept { return impl[idx]; }
+
+    [[nodiscard]] constexpr T *data() noexcept { return impl.data; }
+
+    [[nodiscard]] constexpr const T *data() const noexcept { return impl.data; }
 
 #define v2vAssignEqualsFactory(oper) \
-template<typename U> \
-constexpr Vector &operator oper##= (const Vector<U, N> &other) noexcept { \
-for (std::size_t i = 0; i < N; i++) data[i] oper##= other[i]; \
-return *this; \
-}
+    template<typename E0> \
+    requires (E0::arraySize == arraySize) \
+    constexpr Vector &operator oper##= (const E0 &e0) { for (size_t i = 0; i < arraySize; i++) impl[i] oper##= e0[i]; return *this; }
 
     v2vAssignEqualsFactory(+)
 
@@ -61,122 +220,109 @@ return *this; \
 
 #undef v2vAssignEqualsFactory
 
-    template<typename U>
-    constexpr Vector<T, N> &operator*=(U scalar) noexcept requires Multipliable<T, U> {
-        std::transform(data, data + N, data, [scalar](T v) { return v * scalar; });
-        return *this;
-    }
+#define v2sAssignEqualsFactory(oper) \
+    template<typename U> \
+    constexpr Vector &operator oper##= (U s) { for (size_t i = 0; i < arraySize; i++) impl[i] oper##= s; return *this; }
 
-    template<typename U>
-    constexpr Vector<T, N> &operator/=(U scalar) noexcept requires Divisible<T, U> {
-        std::transform(data, data + N, data, [scalar](T v) { return v / scalar; });
-        return *this;
-    }
+    v2sAssignEqualsFactory(+)
 
-#define v2sOperatorFactory(oper) \
-template<typename U>         \
-[[nodiscard]] friend Vector operator oper (const Vector &lhs, U scalar) { auto temp = lhs; temp oper##= scalar; return temp; }
+    v2sAssignEqualsFactory(-)
 
-    v2sOperatorFactory(*)
+    v2sAssignEqualsFactory(*)
 
-    v2sOperatorFactory(/)
+    v2sAssignEqualsFactory(/)
 
-#undef v2sOperatorFactory
+#undef v2sAssignEqualsFactory
 
-#define v2vOperatorFactory(oper) \
-template<typename U> \
-[[nodiscard]] constexpr friend Vector operator oper (const Vector &lhs, const Vector<U, N> &rhs) noexcept { auto temp = lhs; temp oper##= rhs; return temp; }
-
-    v2vOperatorFactory(+)
-
-    v2vOperatorFactory(-)
-
-    v2vOperatorFactory(*)
-
-    v2vOperatorFactory(/)
-
-#undef v2vOperatorFactory
-
-    Vector operator-() const noexcept {
-        Vector v{};
-        for (size_t i = 0; i < N; i++) v[i] = -data[i];
-        return v;
-    }
 };
 
-template<typename T, typename U, size_t N>
-static inline constexpr T Dot(const Vector<T, N> &lhs, const Vector<U, N> &rhs) noexcept {
-    T sum = 0.;
-    for (std::size_t i = 0; i < N; i++) sum += lhs[i] * rhs[i];
+template<typename E0, typename E1>
+constexpr inline Impl::VecSumExpr<E0, E1> operator+(const E0 &e0, const E1 &e1) { return {e0, e1}; }
+
+template<typename E0, typename E1>
+constexpr inline Impl::VecDiffExpr<E0, E1> operator-(const E0 &e0, const E1 &e1) { return {e0, e1}; }
+
+template<typename E0, typename E1>
+constexpr inline Impl::VecEWiseProductExpr<E0, E1> operator*(const E0 &e0, const E1 &e1) { return {e0, e1}; }
+
+template<typename E0, typename U>
+constexpr inline Impl::VecScalarProductExpr<E0> operator*(const E0 &e0, const U s) requires std::is_convertible_v<U, typename E0::value_type> {
+    return {e0, static_cast<typename E0::value_type>(s)};
+}
+
+template<typename E0, typename E1>
+constexpr inline Impl::VecEWiseDivisionExpr<E0, E1> operator/(const E0 &e0, const E1 &e1) { return {e0, e1}; }
+
+template<typename E0, typename U>
+constexpr inline Impl::VecScalarDivisionExpr<E0> operator/(const E0 &e0, const U s) requires std::is_convertible_v<U, typename E0::value_type> {
+    return {e0, static_cast<typename E0::value_type>(s)};
+}
+
+template<typename E0>
+constexpr inline Impl::VecNegationExpr<E0> operator-(const E0 &e0) { return {e0}; }
+
+template<typename E0, typename E1>
+constexpr inline typename E0::value_type Dot(const E0 &e0, const E1 &e1) {
+    typename E0::value_type sum = 0;
+    for (size_t i = 0; i < E0::arraySize; i++) {
+        sum += e0[i] * e1[i];
+    }
     return sum;
 }
 
-template<typename T, size_t N>
-static inline constexpr T Magnitude(const Vector<T, N> &vec) noexcept { return std::sqrt(Dot(vec, vec)); }
+template<typename E0>
+constexpr inline typename E0::value_type Magnitude(const E0 &e0) { return std::sqrt(Dot(e0, e0)); }
 
-template<typename T, size_t N>
-static inline constexpr Vector<T, N> Normalized(const Vector<T, N> &vec) noexcept { return vec / Magnitude(vec); }
-
-template<typename T, size_t N, T errorMargin = 0.00001L>
-static inline constexpr Vector<T, N> IsNormalized(const Vector<T, N> &vec) noexcept { return std::abs(Magnitude(vec) - T(1)) <= errorMargin; }
-
-template<typename T, typename U>
-static inline constexpr Vector<T, 3> Cross(const Vector<T, 3> &lhs, const Vector<U, 3> &rhs) noexcept {
-    return {
-      lhs[1] * rhs[2] - lhs[2] * rhs[1],
-      lhs[2] * rhs[0] - lhs[0] * rhs[2],
-      lhs[0] * rhs[1] - lhs[1] * rhs[0],
-    };
+template<typename E0>
+constexpr inline Vector<typename E0::value_type, E0::arraySize> Normalized(const E0 &e0) {
+    const auto mag = Magnitude(e0);
+    const auto res = e0 / mag;
+    return res;
 }
 
-template<typename T, std::size_t N>
-constexpr T MinElem(const Vector<T, N> &vec) noexcept {
-    T v = std::numeric_limits<T>::max();
-    for (std::size_t i = 0; i < N; i++) v = std::min(v, vec[i]);
-    return v;
+template<typename E0>
+constexpr inline bool IsNormalized(const E0 &e0) {
+    constexpr typename E0::value_type errorMargin = 0.00001L;
+    return std::abs(Magnitude(e0) - typename E0::value_type(1)) <= errorMargin;
 }
 
-template<typename T, std::size_t N>
-constexpr T MaxElem(const Vector<T, N> &vec) noexcept {
-    T v = std::numeric_limits<T>::min();
-    for (std::size_t i = 0; i < N; i++) v = std::max(v, vec[i]);
-    return v;
-}
-
-namespace Impl {
-template<typename T, typename U, std::size_t N, typename BinaryCallback>
-constexpr Vector<T, N> BinaryConvolve(const Vector<T, N> &lhs, const Vector<U, N> &rhs, BinaryCallback &&fn) noexcept {
-    Vector<T, N> out{};
-    for (std::size_t i = 0; i < N; i++) out[i] = std::invoke(fn, lhs[i], rhs[i]);
-    return out;
-}
-}
-
-template<typename T, typename U, std::size_t N>
-constexpr Vector<T, N> MinPerElem(const Vector<T, N> &lhs, const Vector<U, N> &rhs) noexcept { return Impl::BinaryConvolve(lhs, rhs, [](auto l, auto r) { return std::min(l, r); }); }
-
-template<typename T, typename U, std::size_t N>
-constexpr Vector<T, N> MaxPerElem(const Vector<T, N> &lhs, const Vector<U, N> &rhs) noexcept { return Impl::BinaryConvolve(lhs, rhs, [](auto l, auto r) { return std::max(l, r); }); }
+template<typename E0, typename E1>
+constexpr inline Impl::VecCrossProduct<E0, E1> Cross(const E0 &e0, const E1 &e1) { return {e0, e1}; }
 
 }
 
-template<typename T, std::size_t N>
-struct fmt::formatter<Math::Vector<T, N>> {
-    template<typename ParseContext>
-    constexpr auto parse(ParseContext &ctx) {
-        return ctx.begin();
-    }
+template<typename T, typename E>
+struct fmt::formatter<Math::Impl::VectorExpr<T, E>> {
+    constexpr auto parse(auto &ctx) { return ctx.begin(); }
 
     template<typename FormatContext>
-    constexpr auto format(const Math::Vector<T, N> &vec, FormatContext &ctx) -> decltype(ctx.out()) {
+    constexpr auto format(const Math::Impl::VectorExpr<T, E> &vec, FormatContext &ctx) -> decltype(ctx.out()) {
         return FormatInserter<decltype(ctx.out()), 0>(vec, fmt::format_to(ctx.out(), "("));
     }
 
-  private:
-    template<typename C, std::size_t i = 0>
-    [[nodiscard]] constexpr C FormatInserter(const Math::Vector<T, N> &vec, C o) {
-        if constexpr (i >= N) return o;
-        else return FormatInserter<C, i + 1>(vec, fmt::format_to(o, (i + 1 == N) ? "{})" : "{}, ", vec[i]));
+    template<typename U, typename FormatContext>
+    constexpr auto format(const T &vec, FormatContext &ctx) -> decltype(ctx.out()) {
+        const Math::Impl::VectorExpr<T, E> &ref = vec;
+        return format(ref);
     }
 
+  private:
+    static constexpr size_t size = Math::Impl::VectorExpr<T, E>::arraySize;
+
+    template<typename C, std::size_t i = 0>
+    [[nodiscard]] constexpr C FormatInserter(const Math::Impl::VectorExpr<T, E> &vec, C o) {
+        if constexpr (i >= size) return o;
+        else return FormatInserter<C, i + 1>(vec, fmt::format_to(o, (i + 1 == size) ? "{})" : "{}, ", vec[i]));
+    }
+};
+
+template<typename U> requires std::is_convertible_v<const U &, const Math::Impl::VectorExpr<typename U::value_type, U> &>
+struct fmt::formatter<U> {
+    constexpr auto parse(auto &ctx) { return ctx.begin(); }
+
+    template<typename FormatContext>
+    constexpr auto format(const U &vec, FormatContext &ctx) -> decltype(ctx.out()) {
+        const Math::Impl::VectorExpr<typename U::value_type, U> &expr = vec;
+        return fmt::format_to(ctx.out(), "{}", expr);
+    }
 };

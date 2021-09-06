@@ -16,7 +16,7 @@ ContinuousRenderer::ContinuousRenderer(std::shared_ptr<Scene> scene, unsigned in
     intermediates.image.create(width, height);
 
     integrator.SetScene(scene);
-    integrator.Setup({width, height});
+    integrator.Setup({{width, height}});
 
     window.setActive(false);
     rendererThread = std::thread([this] {
@@ -40,7 +40,7 @@ ContinuousRenderer::ContinuousRenderer(std::shared_ptr<Scene> scene, unsigned in
         auto ConverterWorkerFn = [this, &filter](ConverterWorkItem &&item) {
             for (size_t y = item.startRow; y < item.endRow; y++) {
                 for (size_t x = 0; x < item.image.Width(); x++) {
-                    auto col = filter(item.image.At({x, y})) * 255;
+                    auto col = filter(item.image.At({{x, y}})) * 255;
                     intermediates.image.setPixel(
                       x, y,
                       sf::Color{
@@ -147,11 +147,11 @@ Camera::Camera(sf::RenderTarget &target, Math::Vector<size_t, 2> renderDimension
 
     for (std::size_t y = 0; y < image.Height(); y++) {
         for (std::size_t x = 0; x < image.Width(); x++) {
-            image.At({x, y}) = Gfx::RGBSpectrum{
-              std::abs(static_cast<Gfx::Real>(y) / (static_cast<Gfx::Real>(image.Height()) / 2.) - 1.),
-              0,
-              0,
-            };
+            image.At({{x, y}}) = Gfx::RGBSpectrum{{
+                                                    std::abs(static_cast<Gfx::Real>(y) / (static_cast<Gfx::Real>(image.Height()) / 2.) - 1.),
+                                                    0,
+                                                    0,
+                                                  }};
         }
     }
 
@@ -210,7 +210,7 @@ void Camera::IConvDefaultLERP(sf::Image &dst, const Gfx::Image &src) {
 
     for (std::size_t y = 0; y < src.Height(); y++) {
         for (std::size_t x = 0; x < src.Width(); x++) {
-            const auto &channels = src.At({x, y});
+            const auto &channels = src.At({{x, y}});
             dst.setPixel(x, y, sf::Color{
               static_cast<uint8_t>(std::clamp<Gfx::Real>(std::lerp(start, end, channels[0]), 0., 1.) * Gfx::Real(255.)),
               static_cast<uint8_t>(std::clamp<Gfx::Real>(std::lerp(start, end, channels[1]), 0., 1.) * Gfx::Real(255.)),

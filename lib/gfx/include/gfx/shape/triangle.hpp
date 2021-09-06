@@ -54,7 +54,7 @@ struct TriangleImpl {
           .distance = t,
           .normal = normal,
           .matIndex = matIndex,
-          .uv = {u, v},
+          .uv = {{u, v}},
         };
     }
 

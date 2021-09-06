@@ -53,7 +53,7 @@ constexpr Real SpectrumGaussianGreen(Real lambda) { return SpectrumGaussian(lamb
 constexpr Real SpectrumGaussianBlue(Real lambda) { return SpectrumGaussian(lambda, 410, 480); }
 
 
-constexpr const std::array<const Spectrum, 3> colorWeights = {
+constexpr const std::array<const Spectrum, 3> colorWeights {
     SpectrumFromLambdaUnary(SpectrumGaussianRed),
     SpectrumFromLambdaUnary(SpectrumGaussianGreen),
     SpectrumFromLambdaUnary(SpectrumGaussianBlue)};
@@ -70,11 +70,11 @@ constexpr const auto spectrumReductionPolicy = []() {
 }
 
 constexpr RGBSpectrum SpectrumToRGB(const Spectrum &spectrum) {
-    RGBSpectrum ret{0, 0, 0};
+    RGBSpectrum ret{{0, 0, 0}};
 
     for (std::size_t i = 0; i < Impl::colorWeights.size(); i++) {
-        auto tempSpectrum = spectrum * Impl::colorWeights[i];
-        ret[i] = std::reduce(Impl::spectrumReductionPolicy, tempSpectrum.data, tempSpectrum.data, static_cast<Real>(1), std::multiplies<>());
+        const Spectrum tempSpectrum = spectrum * Impl::colorWeights[i];
+        ret[i] = std::reduce(Impl::spectrumReductionPolicy, tempSpectrum.data(), tempSpectrum.data(), static_cast<Real>(1), std::multiplies<>());
     }
 
     return ret;

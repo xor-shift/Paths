@@ -22,7 +22,7 @@ class Whitted {
         const auto orientedNormal = isection->normal * (goingIn ? 1 : -1);
         const auto offsetIPoint = isection->intersectionPoint + orientedNormal * Epsilon;
 
-        RGBSpectrum omega{0};
+        RGBSpectrum omega{{0}};
         for (const auto &light : pointLights) {
             const auto l = Math::Normalized(light.location - isection->intersectionPoint);
 
@@ -51,8 +51,8 @@ class Whitted {
 
     inline static const std::array pointLights{
       PointLight{
-        .location{0, 7, -2},
-        .emittance{1,1,1},
+        .location{{0, 7, -2}},
+        .emittance{{1, 1, 1}},
       },
     };
 

@@ -9,7 +9,7 @@
 namespace Gfx {
 struct RenderOptions {
     Real fovWidth = M_PI / 2; //in radians
-    Point position{0, 0, 0};
+    Point position{{0, 0, 0}};
     Math::Matrix<Real, 3, 3> rotation{{{1, 0, 0},
                                         {0, 1, 0},
                                         {0, 0, 1}}};

@@ -8,7 +8,7 @@ struct Ray {
     Ray(Point origin, Point direction)
       : origin(origin)
         , direction(direction)
-        , directionReciprocals{1. / direction[0], 1. / direction[1], 1. / direction[2]} {}
+        , directionReciprocals{{1. / direction[0], 1. / direction[1], 1. / direction[2]}} {}
 
     Point origin;
     Point direction;
@@ -22,7 +22,7 @@ struct Intersection {
     Point normal{};
     std::size_t matIndex{};
 
-    Math::Vector<Real, 2> uv{0, 0};
+    Math::Vector<Real, 2> uv{{0, 0}};
 
     Point intersectionPoint{};
 

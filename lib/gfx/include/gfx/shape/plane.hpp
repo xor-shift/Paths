@@ -24,7 +24,7 @@ struct Plane {
             .distance = Math::Dot(center - ray.origin, normal) / denom,
             .normal = normal,
             .matIndex = matIndex,
-            .uv = {0, 0},
+            .uv = {{0, 0}},
         };
     }
 
