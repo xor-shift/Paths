@@ -60,23 +60,17 @@ struct AABox {
               .uv = {0, 0},
             };
 
-            if (bool calcNormal = true; calcNormal) {
-                isection.ComputeIntersectionPoint();
+            isection.ComputeIntersectionPoint();
 
-                auto p = isection.intersectionPoint - (extents.first + extents.second) * .5;
-                auto d = (extents.second - extents.first) * .5;
-                Real bias = 1.000001;
+            const auto p = isection.intersectionPoint - (extents.first + extents.second) * .5;
+            const auto d = (extents.first - extents.second) * .5;
+            const Real bias = 1.000001;
 
-                isection.normal = Math::Normalized(Point{
-                  std::floor(p[0] / d[0] * bias),
-                  std::floor(p[1] / d[1] * bias),
-                  std::floor(p[2] / d[2] * bias),
-                });
-            }
-
-            if (bool calcUV = true; calcUV) {
-
-            }
+            isection.normal = Math::Normalized(Point{
+              std::trunc(p[0] / std::abs(d[0]) * bias),
+              std::trunc(p[1] / std::abs(d[1]) * bias),
+              std::trunc(p[2] / std::abs(d[2]) * bias),
+            });
 
             return isection;
         } else return std::nullopt;
