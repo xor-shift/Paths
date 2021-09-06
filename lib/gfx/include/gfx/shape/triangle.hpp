@@ -24,7 +24,9 @@ struct TriangleImpl {
       : vertices(vertices)
         , edges({vertices[1] - vertices[0], vertices[2] - vertices[0]})
         , normal(Math::Normalized(Math::Cross(edges[0], edges[1])))
-        , center(PVecCalcCenter(vertices))
+        , extents(Math::Min(Math::Min(vertices[0], vertices[1]), vertices[2]),
+                  Math::Max(Math::Max(vertices[0], vertices[1]), vertices[2]))
+        , center(parallelogram ? (extents.first + extents.second) / 2. : PVecCalcCenter(vertices))
         , matIndex(matIndex) {}
 
     [[nodiscard]] constexpr std::optional<Intersection> Intersect(const Ray &ray) const noexcept {
@@ -64,6 +66,7 @@ struct TriangleImpl {
     const Point normal;
 
     //satisfy boundable
+    const std::pair<Point, Point> extents;
     const Point center;
 
     //satisfy Shape

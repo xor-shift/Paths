@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <fmt/format.h>
+#include <functional>
 
 #include <utils/ptrIterator.hpp>
 
@@ -29,54 +30,6 @@ struct VectorExpr {
     [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept { return static_cast<const E &>(*this)[idx]; }
 };
 
-template<typename E0, typename E1>
-struct VecSumExpr : public Impl::VectorExpr<typename E0::value_type, VecSumExpr<E0, E1>> {
-    typedef typename E0::value_type value_type;
-    static constexpr size_t arraySize = E0::arraySize;
-
-    const E0 &e0;
-    const E1 &e1;
-
-    constexpr VecSumExpr(const E0 &e0, const E1 &e1)
-      : e0(e0), e1(e1) {}
-
-    [[nodiscard]] constexpr size_t size() const noexcept { return e0.size(); }
-
-    [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept { return e0[idx] + e1[idx]; }
-};
-
-template<typename E0, typename E1>
-struct VecDiffExpr : public Impl::VectorExpr<typename E0::value_type, VecDiffExpr<E0, E1>> {
-    typedef typename E0::value_type value_type;
-    static constexpr size_t arraySize = E0::arraySize;
-
-    const E0 &e0;
-    const E1 &e1;
-
-    constexpr VecDiffExpr(const E0 &e0, const E1 &e1)
-      : e0(e0), e1(e1) {}
-
-    [[nodiscard]] constexpr size_t size() const noexcept { return e0.size(); }
-
-    [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept { return e0[idx] - e1[idx]; }
-};
-
-template<typename E0, typename E1>
-struct VecEWiseProductExpr : public Impl::VectorExpr<typename E0::value_type, VecEWiseProductExpr<E0, E1>> {
-    typedef typename E0::value_type value_type;
-    static constexpr size_t arraySize = E0::arraySize;
-
-    const E0 &e0;
-    const E1 &e1;
-
-    constexpr VecEWiseProductExpr(const E0 &e0, const E1 &e1)
-      : e0(e0), e1(e1) {}
-
-    [[nodiscard]] constexpr size_t size() const noexcept { return e0.size(); }
-
-    [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept { return e0[idx] * e1[idx]; }
-};
-
 template<typename E0>
 struct VecScalarProductExpr : public Impl::VectorExpr<typename E0::value_type, VecScalarProductExpr<E0>> {
     typedef typename E0::value_type value_type;
@@ -91,22 +44,6 @@ struct VecScalarProductExpr : public Impl::VectorExpr<typename E0::value_type, V
     [[nodiscard]] constexpr size_t size() const noexcept { return e0.size(); }
 
     [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept { return e0[idx] * s; }
-};
-
-template<typename E0, typename E1>
-struct VecEWiseDivisionExpr : public Impl::VectorExpr<typename E0::value_type, VecEWiseDivisionExpr<E0, E1>> {
-    typedef typename E0::value_type value_type;
-    static constexpr size_t arraySize = E0::arraySize;
-
-    const E0 &e0;
-    const E1 &e1;
-
-    constexpr VecEWiseDivisionExpr(const E0 &e0, const E1 &e1)
-      : e0(e0), e1(e1) {}
-
-    [[nodiscard]] constexpr size_t size() const noexcept { return e0.size(); }
-
-    [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept { return e0[idx] / e1[idx]; }
 };
 
 template<typename E0>
@@ -160,6 +97,44 @@ struct VecCrossProduct : public Impl::VectorExpr<typename E0::value_type, VecCro
     }
 };
 
+template<typename E0, typename E1, typename EB>
+struct VecEWiseOperationExpr : public Impl::VectorExpr<typename E0::value_type, VecEWiseOperationExpr<E0, E1, EB>> {
+    typedef typename E0::value_type value_type;
+    static constexpr size_t arraySize = E0::arraySize;
+
+    const E0 &e0;
+    const E1 &e1;
+
+    constexpr VecEWiseOperationExpr(const E0 &e0, const E1 &e1)
+      : e0(e0), e1(e1) {}
+
+    [[nodiscard]] constexpr size_t size() const noexcept { return e0.size(); }
+
+    [[nodiscard]] constexpr value_type operator[](size_t idx) const noexcept { return static_cast<const EB &>(*this).Fn(e0[idx], e1[idx]); }
+};
+
+#define EWiseFactory(name, fn) \
+template<typename E0, typename E1> \
+struct VecEWise##name##Expr : VecEWiseOperationExpr<E0, E1, VecEWise##name##Expr<E0, E1>> { \
+constexpr VecEWise##name##Expr(const E0 &e0, const E1 &e1) \
+: VecEWiseOperationExpr<E0, E1, VecEWise##name##Expr<E0, E1>>(e0, e1) {} \
+constexpr auto Fn(typename E0::value_type v0, typename E0::value_type v1) const fn \
+};
+
+EWiseFactory(Max, { return std::max(v0, v1); })
+
+EWiseFactory(Min, { return std::min(v0, v1); })
+
+EWiseFactory(Sum, { return v0 + v1; })
+
+EWiseFactory(Diff, { return v0 - v1; })
+
+EWiseFactory(Product, { return v0 * v1; })
+
+EWiseFactory(Division, { return v0 / v1; })
+
+#undef EWiseFactory
+
 }
 
 template<typename T, size_t N>
@@ -206,9 +181,9 @@ struct Vector : public Impl::VectorExpr<T, Vector<T, N>> {
     [[nodiscard]] constexpr const T *data() const noexcept { return impl.data; }
 
 #define v2vAssignEqualsFactory(oper) \
-    template<typename E0> \
-    requires (E0::arraySize == arraySize) \
-    constexpr Vector &operator oper##= (const E0 &e0) { for (size_t i = 0; i < arraySize; i++) impl[i] oper##= e0[i]; return *this; }
+template<typename E0> \
+requires (E0::arraySize == arraySize) \
+constexpr Vector &operator oper##= (const E0 &e0) { for (size_t i = 0; i < arraySize; i++) impl[i] oper##= e0[i]; return *this; }
 
     v2vAssignEqualsFactory(+)
 
@@ -221,8 +196,8 @@ struct Vector : public Impl::VectorExpr<T, Vector<T, N>> {
 #undef v2vAssignEqualsFactory
 
 #define v2sAssignEqualsFactory(oper) \
-    template<typename U> \
-    constexpr Vector &operator oper##= (U s) { for (size_t i = 0; i < arraySize; i++) impl[i] oper##= s; return *this; }
+template<typename U> \
+constexpr Vector &operator oper##= (U s) { for (size_t i = 0; i < arraySize; i++) impl[i] oper##= s; return *this; }
 
     v2sAssignEqualsFactory(+)
 
@@ -237,10 +212,10 @@ struct Vector : public Impl::VectorExpr<T, Vector<T, N>> {
 };
 
 template<typename E0, typename E1>
-constexpr inline Impl::VecSumExpr<E0, E1> operator+(const E0 &e0, const E1 &e1) { return {e0, e1}; }
+constexpr inline Impl::VecEWiseSumExpr<E0, E1> operator+(const E0 &e0, const E1 &e1) { return {e0, e1}; }
 
 template<typename E0, typename E1>
-constexpr inline Impl::VecDiffExpr<E0, E1> operator-(const E0 &e0, const E1 &e1) { return {e0, e1}; }
+constexpr inline Impl::VecEWiseDiffExpr<E0, E1> operator-(const E0 &e0, const E1 &e1) { return {e0, e1}; }
 
 template<typename E0, typename E1>
 constexpr inline Impl::VecEWiseProductExpr<E0, E1> operator*(const E0 &e0, const E1 &e1) { return {e0, e1}; }
@@ -284,6 +259,12 @@ constexpr inline bool IsNormalized(const E0 &e0) {
 
 template<typename E0, typename E1>
 constexpr inline Impl::VecCrossProduct<E0, E1> Cross(const E0 &e0, const E1 &e1) { return {e0, e1}; }
+
+template<typename E0, typename E1>
+constexpr inline Impl::VecEWiseMaxExpr<E0, E1> Max(const E0 &e0, const E1 &e1) { return {e0, e1}; }
+
+template<typename E0, typename E1>
+constexpr inline Impl::VecEWiseMinExpr<E0, E1> Min(const E0 &e0, const E1 &e1) { return {e0, e1}; }
 
 }
 

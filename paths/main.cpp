@@ -22,26 +22,29 @@ int main() {
         }
       }
       << Gfx::Material{
-        .albedo = Gfx::Material::AlbedoDirect{
-          .albedo{{1, 0, 0}},
-        }
+        .albedo = Gfx::Material::AlbedoDirect{.albedo{{1, 0, 0}}}
       }
       << Gfx::Shape::Plane{
         .center{{0, -1, 0}},
         .normal{{0, 1, 0}},
         .matIndex = 1,
       }
-      << Gfx::Shape::Triangle(0, {Gfx::Point{{0, 2, 1}},
-                                  {{1, 2, 1}},
-                                  {{.5, 3, 2}}})
+      << Gfx::Shape::Triangle(0, {
+        Gfx::Point{{0, 2, 1}},
+        Gfx::Point{{1, 2, 1}},
+        Gfx::Point{{.5, 3, 2}}})
       << Gfx::Shape::AABox{
         Gfx::Point{{0, 1, 0}},
         Gfx::Point{{1, 2, 1}},
         0
       }
-      << Gfx::Shape::Sphere({{0, 0, -4}}, 1., 0);
+      << Gfx::Shape::Sphere({{0, 0, -4}}, 1., 0)
+      << Gfx::Shape::Parallelogram(0, {
+        Gfx::Point{{-1, 1, -1}},
+        Gfx::Point{{-1, 1, 1}},
+        Gfx::Point{{-1.5, 2, 0}}});
 
-    Gfx::ContinuousRenderer renderer(scenePtr, 640, 480, "asdasd");
+    Gfx::ContinuousRenderer renderer(scenePtr, 960, 720, "asdasd");
     renderer.Join();
 
     ImGui::SFML::Shutdown();

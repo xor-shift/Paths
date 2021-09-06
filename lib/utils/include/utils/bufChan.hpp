@@ -115,19 +115,19 @@ class CircularBuffer {
 
     reference back() { return *GetAtIdx(backIdx); }
 
-    reference operator[](size_t idx) & noexcept {
+    reference operator[](size_t idx) noexcept {
         auto actualIdx = Add(frontIdx, idx);
         return *GetAtIdx(idx);
     }
 
-    reference at(size_t idx) &{
+    reference at(size_t idx) {
         if (!InBounds(idx)) throw std::out_of_range(fmt::format("at called with index {} which is out of bounds (back: {}, front: {})", idx, frontIdx, backIdx));
         return this->operator[](idx);
     }
 
-    const_reference operator[](size_t idx) const & noexcept { return const_cast<const_reference>(const_cast<CircularBuffer<T> *>(this)->operator[](idx)); }
+    const_reference operator[](size_t idx) const noexcept { return const_cast<const_reference>(const_cast<CircularBuffer<T> *>(this)->operator[](idx)); }
 
-    const_reference at(size_t idx) const &{ return const_cast<const_reference>(const_cast<CircularBuffer<T> *>(this)->at(idx)); }
+    const_reference at(size_t idx) const { return const_cast<const_reference>(const_cast<CircularBuffer<T> *>(this)->at(idx)); }
 
     [[nodiscard]] void *GetRawAtIdx(size_t idx) noexcept {
         return static_cast<void *>(&buffer[idx * sizeof(value_type)]);

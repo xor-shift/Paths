@@ -13,25 +13,26 @@ class Whitted {
     [[nodiscard]] constexpr RGBSpectrum Sample(const Scene &scene, const Ray &ray, size_t depth = 0) const {
         if (depth >= nReflections) return {};
 
-        auto isection = scene.Intersect(ray);
-        if (!isection) return {};
-        isection->ComputeIntersectionPoint();
+        auto isectionOpt = scene.Intersect(ray);
+        if (!isectionOpt) return {};
+        isectionOpt->ComputeIntersectionPoint();
+        const auto isection = *isectionOpt;
 
-        const auto &mat = scene.GetMaterial(isection->matIndex);
-        const bool goingIn = Math::Dot(isection->normal, ray.direction) < 0;
-        const auto orientedNormal = isection->normal * (goingIn ? 1 : -1);
-        const auto offsetIPoint = isection->intersectionPoint + orientedNormal * Epsilon;
+        const auto &mat = scene.GetMaterial(isection.matIndex);
+        const bool goingIn = Math::Dot(isection.normal, ray.direction) < 0;
+        const auto orientedNormal = isection.normal * (goingIn ? 1 : -1);
+        const auto offsetIPoint = isection.intersectionPoint + orientedNormal * Epsilon;
 
         RGBSpectrum omega{{0}};
         for (const auto &light : pointLights) {
-            const auto l = Math::Normalized(light.location - isection->intersectionPoint);
+            const auto l = Math::Normalized(light.location - isection.intersectionPoint);
 
             if (scene.Intersect(Ray{offsetIPoint, l})) continue;
 
             omega += light.emittance * std::max<Real>(0., Math::Dot(l, orientedNormal));
         }
 
-        omega *= mat.GetAlbedo(isection->uv);
+        omega *= mat.GetAlbedo(isection.uv);
 
         if (mat.metallic > 0) {
             omega *= (1. - mat.metallic);

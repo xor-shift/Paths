@@ -5,8 +5,8 @@
 template<typename T, size_t N>
 struct PtrIterator {
     explicit PtrIterator(T *ptr, ptrdiff_t i = 0)
-    : ptr(ptr)
-    , i(i) {}
+      : ptr(ptr)
+        , i(i) {}
 
     /*template<typename U>
     friend constexpr auto operator<=>(const PtrIterator &lhs, const PtrIterator<U, N> &rhs) noexcept requires std::is_same_v<std::decay_t<T>, std::decay_t<U>> { return lhs.i <=> rhs.i; }*/
