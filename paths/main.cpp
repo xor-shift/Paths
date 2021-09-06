@@ -8,7 +8,6 @@
 #include "gfx/ray.hpp"
 
 int main() {
-
     auto scenePtr = std::make_shared<Gfx::Scene>();
 
     auto &scene = *scenePtr;

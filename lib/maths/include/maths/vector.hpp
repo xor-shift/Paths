@@ -274,11 +274,7 @@ template<typename E0>
 constexpr inline typename E0::value_type Magnitude(const E0 &e0) { return std::sqrt(Dot(e0, e0)); }
 
 template<typename E0>
-constexpr inline Vector<typename E0::value_type, E0::arraySize> Normalized(const E0 &e0) {
-    const auto mag = Magnitude(e0);
-    const auto res = e0 / mag;
-    return res;
-}
+constexpr inline Impl::VecScalarDivisionExpr<E0> Normalized(const E0 &e0) { return {e0, Magnitude(e0)}; }
 
 template<typename E0>
 constexpr inline bool IsNormalized(const E0 &e0) {
