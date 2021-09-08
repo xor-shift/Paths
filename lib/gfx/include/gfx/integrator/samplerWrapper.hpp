@@ -9,17 +9,23 @@
 #include <gfx/image.hpp>
 #include <gfx/scene/scene.hpp>
 #include <maths/matvec.hpp>
+#include <gfx/sampler/sampler.hpp>
 #include <utils/workerPool.hpp>
 
 namespace Gfx {
 
-template<Concepts::Sampler Sampler>
+template<Concepts::Sampler T>
 class SamplerWrapperIntegrator {
   public:
-    explicit SamplerWrapperIntegrator(Sampler &&sampler) requires std::is_move_constructible_v<Sampler>
+    typedef T sampler_type;
+
+    explicit SamplerWrapperIntegrator(sampler_type &&sampler) requires std::is_move_constructible_v<sampler_type>
       : sampler(std::move(sampler))
         , workerPool(&Worker, 16) {
-        workerThread = std::thread([this] { workerPool.Work(6); });
+        workerThread = std::thread([this] {
+            const auto conc = std::thread::hardware_concurrency();
+            workerPool.Work(conc * 3 / 4);
+        });
     }
 
     ~SamplerWrapperIntegrator() {
@@ -56,7 +62,7 @@ class SamplerWrapperIntegrator {
     }
 
   private:
-    Sampler sampler;
+    sampler_type sampler;
 
     RenderOptions renderOptions{};
     std::shared_ptr<Scene> scene{nullptr};
@@ -66,7 +72,7 @@ class SamplerWrapperIntegrator {
     Gfx::Image backBuffer{};
 
     struct WorkItem {
-        SamplerWrapperIntegrator<Sampler> &sampler;
+        SamplerWrapperIntegrator<sampler_type> &sampler;
         size_t startRow, endRow;
     };
 
@@ -78,26 +84,22 @@ class SamplerWrapperIntegrator {
 
         const Real d = (static_cast<Real>(backBuffer.Width()) / 2) / std::tan(renderOptions.fovWidth / 2.);
 
-        const auto ScanRow = [&](size_t row) {
+        for (size_t row = item.startRow; row != item.endRow; row++) {
             for (std::size_t x = 0; x < backBuffer.Width(); x++) {
-                Real rayX = static_cast<Real>(x);
-                rayX -= static_cast<Real>(backBuffer.Width()) / 2.;
+                const Real rayX = static_cast<Real>(x)
+                                  - static_cast<Real>(backBuffer.Width()) / 2.;
 
-                Real rayY = static_cast<Real>(backBuffer.Height() - row);
-                rayY -= static_cast<Real>(backBuffer.Height()) / 2.;
+                const Real rayY = static_cast<Real>(backBuffer.Height() - row)
+                                  - static_cast<Real>(backBuffer.Height()) / 2.;
 
-                Ray ray(renderOptions.position, renderOptions.rotation * Math::Normalized(Point{{rayX, rayY, d}}));
+                const Ray ray(renderOptions.position, renderOptions.rotation * Math::Normalized(Point{{rayX, rayY, d}}));
 
                 backBuffer.At({{x, row}}) = sampler.Sample(*scene, ray);
             }
-        };
-
-        for (size_t row = item.startRow; row != item.endRow; row++) {
-            ScanRow(row);
         }
     }
 
-    WorkerPoolWG<decltype(&SamplerWrapperIntegrator<Sampler>::Worker), WorkItem> workerPool;
+    WorkerPoolWG<decltype(&SamplerWrapperIntegrator<sampler_type>::Worker), WorkItem> workerPool;
     std::thread workerThread;
 };
 

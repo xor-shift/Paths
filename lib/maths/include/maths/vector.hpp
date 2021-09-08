@@ -97,15 +97,15 @@ struct VecCrossProduct : public Impl::VectorExpr<typename E0::value_type, VecCro
     }
 };
 
-template<typename E0, typename E1, typename EB>
-struct VecEWiseOperationExpr : public Impl::VectorExpr<typename E0::value_type, VecEWiseOperationExpr<E0, E1, EB>> {
+template<typename E0, typename E1, typename EB> requires (E0::arraySize == E1::arraySize)
+struct VecBinaryOperationExpr : public Impl::VectorExpr<typename E0::value_type, VecBinaryOperationExpr<E0, E1, EB>> {
     typedef typename E0::value_type value_type;
     static constexpr size_t arraySize = E0::arraySize;
 
     const E0 &e0;
     const E1 &e1;
 
-    constexpr VecEWiseOperationExpr(const E0 &e0, const E1 &e1)
+    constexpr VecBinaryOperationExpr(const E0 &e0, const E1 &e1)
       : e0(e0), e1(e1) {}
 
     [[nodiscard]] constexpr size_t size() const noexcept { return e0.size(); }
@@ -115,9 +115,9 @@ struct VecEWiseOperationExpr : public Impl::VectorExpr<typename E0::value_type, 
 
 #define EWiseFactory(name, fn) \
 template<typename E0, typename E1> \
-struct VecEWise##name##Expr : VecEWiseOperationExpr<E0, E1, VecEWise##name##Expr<E0, E1>> { \
-constexpr VecEWise##name##Expr(const E0 &e0, const E1 &e1) \
-: VecEWiseOperationExpr<E0, E1, VecEWise##name##Expr<E0, E1>>(e0, e1) {} \
+struct VecBinary##name##Expr : VecBinaryOperationExpr<E0, E1, VecBinary##name##Expr<E0, E1>> { \
+constexpr VecBinary##name##Expr(const E0 &e0, const E1 &e1) \
+: VecBinaryOperationExpr<E0, E1, VecBinary##name##Expr<E0, E1>>(e0, e1) {} \
 constexpr auto Fn(typename E0::value_type v0, typename E0::value_type v1) const fn \
 };
 
@@ -212,13 +212,13 @@ constexpr Vector &operator oper##= (U s) { for (size_t i = 0; i < arraySize; i++
 };
 
 template<typename E0, typename E1>
-constexpr inline Impl::VecEWiseSumExpr<E0, E1> operator+(const E0 &e0, const E1 &e1) { return {e0, e1}; }
+constexpr inline Impl::VecBinarySumExpr<E0, E1> operator+(const E0 &e0, const E1 &e1) { return {e0, e1}; }
 
 template<typename E0, typename E1>
-constexpr inline Impl::VecEWiseDiffExpr<E0, E1> operator-(const E0 &e0, const E1 &e1) { return {e0, e1}; }
+constexpr inline Impl::VecBinaryDiffExpr<E0, E1> operator-(const E0 &e0, const E1 &e1) { return {e0, e1}; }
 
 template<typename E0, typename E1>
-constexpr inline Impl::VecEWiseProductExpr<E0, E1> operator*(const E0 &e0, const E1 &e1) { return {e0, e1}; }
+constexpr inline Impl::VecBinaryProductExpr<E0, E1> operator*(const E0 &e0, const E1 &e1) { return {e0, e1}; }
 
 template<typename E0, typename U>
 constexpr inline Impl::VecScalarProductExpr<E0> operator*(const E0 &e0, const U s) requires std::is_convertible_v<U, typename E0::value_type> {
@@ -226,7 +226,7 @@ constexpr inline Impl::VecScalarProductExpr<E0> operator*(const E0 &e0, const U 
 }
 
 template<typename E0, typename E1>
-constexpr inline Impl::VecEWiseDivisionExpr<E0, E1> operator/(const E0 &e0, const E1 &e1) { return {e0, e1}; }
+constexpr inline Impl::VecBinaryDivisionExpr<E0, E1> operator/(const E0 &e0, const E1 &e1) { return {e0, e1}; }
 
 template<typename E0, typename U>
 constexpr inline Impl::VecScalarDivisionExpr<E0> operator/(const E0 &e0, const U s) requires std::is_convertible_v<U, typename E0::value_type> {
@@ -249,7 +249,7 @@ template<typename E0>
 constexpr inline typename E0::value_type Magnitude(const E0 &e0) { return std::sqrt(Dot(e0, e0)); }
 
 template<typename E0>
-constexpr inline Impl::VecScalarDivisionExpr<E0> Normalized(const E0 &e0) { return {e0, Magnitude(e0)}; }
+constexpr inline auto Normalized(const E0 &e0) { return e0 / Magnitude(e0); }
 
 template<typename E0>
 constexpr inline bool IsNormalized(const E0 &e0) {
@@ -261,10 +261,10 @@ template<typename E0, typename E1>
 constexpr inline Impl::VecCrossProduct<E0, E1> Cross(const E0 &e0, const E1 &e1) { return {e0, e1}; }
 
 template<typename E0, typename E1>
-constexpr inline Impl::VecEWiseMaxExpr<E0, E1> Max(const E0 &e0, const E1 &e1) { return {e0, e1}; }
+constexpr inline Impl::VecBinaryMaxExpr<E0, E1> Max(const E0 &e0, const E1 &e1) { return {e0, e1}; }
 
 template<typename E0, typename E1>
-constexpr inline Impl::VecEWiseMinExpr<E0, E1> Min(const E0 &e0, const E1 &e1) { return {e0, e1}; }
+constexpr inline Impl::VecBinaryMinExpr<E0, E1> Min(const E0 &e0, const E1 &e1) { return {e0, e1}; }
 
 }
 

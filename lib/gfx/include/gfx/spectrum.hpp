@@ -80,6 +80,6 @@ constexpr RGBSpectrum SpectrumToRGB(const Spectrum &spectrum) {
     return ret;
 }
 
-constexpr Spectrum RGBToSpectrum(const RGBSpectrum &rgb) { return {}; }
+constexpr Spectrum RGBToSpectrum([[maybe_unused]] const RGBSpectrum &rgb) { return {}; }
 
 }

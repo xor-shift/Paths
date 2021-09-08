@@ -5,7 +5,7 @@
 namespace Gfx {
 
 struct Ray {
-    Ray(Point origin, Point direction)
+    constexpr Ray(Point origin, Point direction)
       : origin(origin)
         , direction(direction)
         , directionReciprocals{{1. / direction[0], 1. / direction[1], 1. / direction[2]}} {}
@@ -16,20 +16,22 @@ struct Ray {
 };
 
 struct Intersection {
-    const Ray &theRay;
+    constexpr Intersection(const Ray &ray, size_t matIndex, Real distance, Point normal = {{0}}, Math::Vector<Real, 2> uv = {{0, 0}})
+    :matIndex(matIndex)
+    ,distance(distance)
+    ,intersectionPoint(ray.origin + ray.direction * distance)
+    ,normal(normal)
+    ,uv(uv) {}
+
+    std::size_t matIndex{};
 
     Real distance{};
+    Point intersectionPoint;
     Point normal{};
-    std::size_t matIndex{};
 
     Math::Vector<Real, 2> uv{{0, 0}};
 
-    Point intersectionPoint{};
-
-    Intersection &ComputeIntersectionPoint() {
-        intersectionPoint = theRay.origin + theRay.direction * distance;
-        return *this;
-    }
+    //constexpr Point ComputeIntersectionPoint(const Ray &ray) const noexcept { return ray.origin + ray.direction * distance; }
 };
 
 }

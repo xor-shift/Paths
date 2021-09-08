@@ -18,6 +18,16 @@ enum class TriangleCenterType {
     Orthocenter,
 };
 
+/**
+ * Triangle base
+ * V2    x -> V3 when parallelogram == true
+ * | \
+ * |  \
+ * E1  \
+ * |    \
+ * V0-E0-V1
+ * @tparam parallelogram
+ */
 template<bool parallelogram>
 struct TriangleImpl {
     explicit TriangleImpl(std::size_t matIndex, std::array<Point, 3> vertices)
@@ -51,13 +61,7 @@ struct TriangleImpl {
         const auto t = f * Math::Dot(edges[1], q);
         if (t <= Epsilon) return std::nullopt;
 
-        return Intersection{
-          .theRay = ray,
-          .distance = t,
-          .normal = normal,
-          .matIndex = matIndex,
-          .uv = {{u, v}},
-        };
+        return Intersection(ray, matIndex, t, normal, {{u, v}});
     }
 
     //regular data

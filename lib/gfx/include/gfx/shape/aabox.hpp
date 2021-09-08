@@ -1,8 +1,3 @@
-/**
- * This file contains a AABox shape, described by two points in space, representing an axis aligned box
- * The main purpose of this shape is use in BVHs
- */
-
 #pragma once
 
 #include <chrono>
@@ -50,17 +45,14 @@ struct AABox {
         return Func<getDistance>(tMin, tMax);
     }
 
+    /**
+     * Does not calculate UV coordinates
+     * @param ray
+     * @return
+     */
     [[nodiscard]] constexpr std::optional<Intersection> Intersect(const Ray &ray) const noexcept {
         if (const auto &[isect, dist] = Intersects<true>(ray); isect) {
-            auto isection = Intersection{
-              .theRay = ray,
-              .distance = dist,
-              .normal = Point{{0, 0, 0}},
-              .matIndex = matIndex,
-              .uv = {{0, 0}},
-            };
-
-            isection.ComputeIntersectionPoint();
+            auto isection = Intersection(ray, matIndex, dist);
 
             const auto p = isection.intersectionPoint - (extents.first + extents.second) * .5;
             const auto d = (extents.first - extents.second) * .5;

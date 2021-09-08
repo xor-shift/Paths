@@ -13,21 +13,21 @@ class Whitted {
     [[nodiscard]] constexpr RGBSpectrum Sample(const Scene &scene, const Ray &ray, size_t depth = 0) const {
         if (depth >= nReflections) return {};
 
-        auto isectionOpt = scene.Intersect(ray);
+        const auto isectionOpt = scene.Intersect(ray);
         if (!isectionOpt) return {};
-        isectionOpt->ComputeIntersectionPoint();
-        const auto isection = *isectionOpt;
+        const auto &isection = *isectionOpt;
 
         const auto &mat = scene.GetMaterial(isection.matIndex);
         const bool goingIn = Math::Dot(isection.normal, ray.direction) < 0;
         const auto orientedNormal = isection.normal * (goingIn ? 1 : -1);
         const auto offsetIPoint = isection.intersectionPoint + orientedNormal * Epsilon;
 
-        RGBSpectrum omega{{0}};
+        RGBSpectrum omega{{.2, .2, .2}};
         for (const auto &light : pointLights) {
-            const auto l = Math::Normalized(light.location - isection.intersectionPoint);
+            const Point l = Math::Normalized(light.location - isection.intersectionPoint);
+            const Ray lv{offsetIPoint, l};
 
-            if (scene.Intersect(Ray{offsetIPoint, l})) continue;
+            if (scene.Intersect(lv)) continue;
 
             omega += light.emittance * std::max<Real>(0., Math::Dot(l, orientedNormal));
         }
@@ -52,7 +52,7 @@ class Whitted {
 
     inline static const std::array pointLights{
       PointLight{
-        .location{{0, 7, -2}},
+        .location{{0, 7, 0}},
         .emittance{{1, 1, 1}},
       },
     };

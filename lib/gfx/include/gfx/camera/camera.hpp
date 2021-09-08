@@ -8,6 +8,7 @@
 #include <gfx/image.hpp>
 #include <gfx/integrator/integrator.hpp>
 #include <gfx/integrator/samplerWrapper.hpp>
+#include <gfx/sampler/pt.hpp>
 #include <gfx/sampler/whitter.hpp>
 
 namespace Gfx {

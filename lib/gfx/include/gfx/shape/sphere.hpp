@@ -30,17 +30,8 @@ struct Sphere {
 
         const Real t = (s0 < 1) ? s1 : (s1 < 1) ? s0 : std::min(s0, s1);
 
-        auto isect = Intersection{
-          .theRay = ray,
+        Intersection isect(ray, matIndex, t);
 
-          .distance = t,
-          .normal = {},
-          .matIndex = matIndex,
-
-          .uv = {},
-        };
-
-        isect.ComputeIntersectionPoint();
         isect.normal = Math::Normalized(isect.intersectionPoint - center);
 
         isect.uv = {{

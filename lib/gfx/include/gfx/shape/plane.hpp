@@ -11,6 +11,11 @@
 namespace Gfx::Shape {
 
 struct Plane {
+    /**
+     * Does not calculate UV coordinates (by necessity)
+     * @param ray
+     * @return
+     */
     [[nodiscard]] constexpr std::optional<Intersection> Intersect(const Ray &ray) const noexcept {
         LIBGFX_NORMAL_CHECK(ray.direction);
         LIBGFX_NORMAL_CHECK(normal);
@@ -19,13 +24,7 @@ struct Plane {
 
         if (std::abs(denom) <= Epsilon) return std::nullopt;
 
-        return Intersection{
-            .theRay = ray,
-            .distance = Math::Dot(center - ray.origin, normal) / denom,
-            .normal = normal,
-            .matIndex = matIndex,
-            .uv = {{0, 0}},
-        };
+        return Intersection(ray, matIndex, Math::Dot(center - ray.origin, normal) / denom, normal, {{0, 0}});
     }
 
     const Point center{};

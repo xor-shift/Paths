@@ -12,6 +12,8 @@ int main() {
 
     auto &scene = *scenePtr;
 
+    constexpr auto k = 5;
+
     scene
       << Gfx::Material{
         .albedo = Gfx::Material::AlbedoUVFunc{
@@ -43,6 +45,23 @@ int main() {
         Gfx::Point{{-1, 1, -1}},
         Gfx::Point{{-1, 1, 1}},
         Gfx::Point{{-1.5, 2, 0}}});
+      /*<< Gfx::Shape::Triangle(0, {
+        Gfx::Point{{-k, k, -k}},
+        Gfx::Point{{k, k, -k}},
+        Gfx::Point{{-k, k, k}}})
+      << Gfx::Shape::Triangle(0, {
+        Gfx::Point{{k, k, -k}},
+        Gfx::Point{{k, k, k}},
+        Gfx::Point{{-k, k, k}}})
+      << Gfx::Shape::Triangle(0, {
+        Gfx::Point{{-k, -k, k}},
+        Gfx::Point{{k, -k, k}},
+        Gfx::Point{{-k, k, k}}})
+      << Gfx::Shape::Triangle(0, {
+        Gfx::Point{{k, -k, k}},
+        Gfx::Point{{k, k, k}},
+        Gfx::Point{{-k, k, k}}});*/
+
 
     Gfx::ContinuousRenderer renderer(scenePtr, 960, 720, "asdasd");
     renderer.Join();

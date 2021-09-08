@@ -23,7 +23,7 @@ ContinuousRenderer::ContinuousRenderer(std::shared_ptr<Scene> scene, unsigned in
         window.setActive(true);
 
         Filters::Basic::ChainedUnaryFilter filter{
-          Filters::Basic::InvLERP(0, 1.25),
+          Filters::Basic::InvLERP(0, 1),
           Filters::Basic::Clamp{0, 1}
         };
 

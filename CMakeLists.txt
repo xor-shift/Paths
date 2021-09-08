@@ -30,8 +30,6 @@ target_link_libraries(Paths
         omp
         fmt
         sfml-graphics sfml-window sfml-network sfml-audio sfml-system
-        #${SFML_LIBRARIES}
-        #${SFML_DEPENDENCIES}
         ImGui-SFML::ImGui-SFML
         paths_gfx
         )
@@ -45,12 +43,24 @@ target_compile_options(Paths PRIVATE
         -funsafe-math-optimizations
         )
 
+
+add_executable(${PROJECT_NAME}_distrib_tests
+        paths/distribTest.cpp
+        )
+target_include_directories(${PROJECT_NAME}_distrib_tests PRIVATE thirdparty/implot)
+target_link_libraries(${PROJECT_NAME}_distrib_tests
+        pthread
+        omp
+        fmt
+        paths_maths)
+
 if ((CMAKE_BUILD_TYPE MATCHES Debug) OR (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo))
+    set(CMAKE_CXX_COMPILE_FLAGS "${CMAKE_CXX_COMPILE_FLAGS} -fsanitize=address -fsanitize=undefined")
+    set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -fsanitize=address -fsanitize=undefined")
+
     target_compile_options(Paths PRIVATE
             -O2
-            -g -fno-omit-frame-pointer
-            -fsanitize=address -fsanitize=undefined)
+            -g -fno-omit-frame-pointer)
 
-    target_link_options(Paths PRIVATE
-            -rdynamic -fsanitize=address -fsanitize=undefined)
+    target_link_options(Paths PRIVATE)
 endif ()
