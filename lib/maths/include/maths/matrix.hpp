@@ -150,13 +150,22 @@ struct Matrix : public Impl::MatrixExpr<T, Matrix<T, M, N>> {
           sg = std::sin(pitch),
           cg = std::cos(pitch);
 
-        Matrix<T, 3, 3> mat{{
-                              ca * cb, ca * sb * sg - sa * cg, ca * sb * cg + sa * sg,
-                              sa * cb, sa * sb * sg + ca * cg, sa * sb * cg - ca * sg,
-                              -sb, cb * sg, cb * cg,
-                            }};
-
-        return mat;
+        return
+          Matrix<T, 3, 3>{{
+                            ca, -sa, 0,
+                            sa, ca, 0,
+                            0, 0, 1,
+                          }} *
+          Matrix<T, 3, 3>{{
+                            cb, 0, sb,
+                            0, 1, 0,
+                            -sb, 0, cb,
+                          }} *
+          Matrix<T, 3, 3>{{
+                            1, 0, 0,
+                            0, cg, -sg,
+                            0, sg, cg,
+                          }};
     }
 };
 

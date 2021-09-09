@@ -32,6 +32,8 @@ target_link_libraries(Paths
         sfml-graphics sfml-window sfml-network sfml-audio sfml-system
         ImGui-SFML::ImGui-SFML
         paths_gfx
+        paths_maths
+        paths_utils
         )
 
 target_compile_options(Paths PRIVATE
@@ -54,6 +56,7 @@ target_link_libraries(${PROJECT_NAME}_distrib_tests
         fmt
         paths_maths)
 
+set(CMAKE_CXX_COMPILE_FLAGS "${CMAKE_CXX_COMPILE_FLAGS} -march=native -mtune=native")
 if ((CMAKE_BUILD_TYPE MATCHES Debug) OR (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo))
     set(CMAKE_CXX_COMPILE_FLAGS "${CMAKE_CXX_COMPILE_FLAGS} -fsanitize=address -fsanitize=undefined")
     set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -fsanitize=address -fsanitize=undefined")

@@ -8,7 +8,7 @@ struct Ray {
     constexpr Ray(Point origin, Point direction)
       : origin(origin)
         , direction(direction)
-        , directionReciprocals{{1. / direction[0], 1. / direction[1], 1. / direction[2]}} {}
+        , directionReciprocals(Math::Reciprocal(direction)) {}
 
     Point origin;
     Point direction;

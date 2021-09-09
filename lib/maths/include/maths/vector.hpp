@@ -226,7 +226,7 @@ constexpr inline typename E0::value_type Dot(const E0 &e0, const E1 &e1) {
 }
 
 template<Concepts::VectorExpression E0>
-constexpr inline auto Magnitude(const E0 &e0) { return std::sqrt(Dot(e0, e0)); }
+constexpr inline typename E0::value_type Magnitude(const E0 &e0) { return std::sqrt(Dot(e0, e0)); }
 
 template<Concepts::VectorExpression E0>
 constexpr inline auto Normalized(const E0 &e0) { return e0 / Magnitude(e0); }

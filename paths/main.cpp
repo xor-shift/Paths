@@ -2,38 +2,17 @@
 #include <SFML/Graphics.hpp>
 #include <imgui-SFML.h>
 
-#include "gfx/camera/camera.hpp"
-#include "gfx/scene/scene.hpp"
-#include "gfx/image.hpp"
-#include "gfx/ray.hpp"
+#include <gfx/camera/camera.hpp>
+#include <gfx/scene/scene.hpp>
+#include <gfx/image.hpp>
+#include <gfx/ray.hpp>
 
-
-void TestMat() {
-    Math::Matrix<double, 2, 4> mat0{{
-                                      4, 0, -2, 1,
-                                      -1, 2, 0, 3,
-                                    }};
-    Math::Matrix<float, 4, 3> mat1{{
-                                     3, -2, 1,
-                                     1, 1, 0,
-                                     1, 0, -2,
-                                     0, 6, 2,
-                                   }};
-
-    fmt::print("{}\n", mat0);
-    fmt::print("{}\n", mat1);
-
-    auto res0 = mat0 * mat1;
-
-    fmt::print("{}\n", res0);
-}
+#include <gfx/stl/binary.hpp>
 
 int main() {
-    TestMat();
-
-    //return 0;
-
     auto scenePtr = std::make_shared<Gfx::Scene>();
+
+    Gfx::STL::InsertIntoScene(*scenePtr, Gfx::STL::Binary::ReadFile("teapot.stl"), 0, {{0, 0, 25}});
 
     auto &scene = *scenePtr;
 
@@ -44,7 +23,7 @@ int main() {
         .albedo = Gfx::Material::AlbedoUVFunc{
           .uvFunc = [](const Math::Vector<Gfx::Real, 2> &uv) -> Gfx::RGBSpectrum {
               const auto &[u, v] = uv.implData();
-              return {{u, v, 1. - u - v}};
+              return {{u, v, Gfx::Real(1) - u - v}};
           }
         }
       }

@@ -30,7 +30,7 @@ enum class TriangleCenterType {
  */
 template<bool parallelogram>
 struct TriangleImpl {
-    explicit TriangleImpl(std::size_t matIndex, std::array<Point, 3> vertices)
+    constexpr explicit TriangleImpl(std::size_t matIndex, std::array<Point, 3> vertices)
       : vertices(vertices)
         , edges({vertices[1] - vertices[0], vertices[2] - vertices[0]})
         , normal(Math::Normalized(Math::Cross(edges[0], edges[1])))
@@ -52,11 +52,11 @@ struct TriangleImpl {
 
         const auto s = ray.origin - vertices[0];
         const auto u = f * Math::Dot(s, h);
-        if (0. > u || u > 1.) return std::nullopt;
+        if (u < 0 || u > 1) return std::nullopt;
 
         const auto q = Math::Cross(s, edges[0]);
         const auto v = f * Math::Dot(ray.direction, q);
-        if (0. > v || (parallelogram ? v > 1. : u + v > 1.)) return std::nullopt;
+        if (v < 0 || (parallelogram ? v > 1 : u + v > 1)) return std::nullopt;
 
         const auto t = f * Math::Dot(edges[1], q);
         if (t <= Epsilon) return std::nullopt;
