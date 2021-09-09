@@ -59,7 +59,6 @@ if ((CMAKE_BUILD_TYPE MATCHES Debug) OR (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo
     set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -fsanitize=address -fsanitize=undefined")
 
     target_compile_options(Paths PRIVATE
-            -O2
             -g -fno-omit-frame-pointer)
 
     target_link_options(Paths PRIVATE)

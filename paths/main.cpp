@@ -7,7 +7,32 @@
 #include "gfx/image.hpp"
 #include "gfx/ray.hpp"
 
+
+void TestMat() {
+    Math::Matrix<double, 2, 4> mat0{{
+                                      4, 0, -2, 1,
+                                      -1, 2, 0, 3,
+                                    }};
+    Math::Matrix<float, 4, 3> mat1{{
+                                     3, -2, 1,
+                                     1, 1, 0,
+                                     1, 0, -2,
+                                     0, 6, 2,
+                                   }};
+
+    fmt::print("{}\n", mat0);
+    fmt::print("{}\n", mat1);
+
+    auto res0 = mat0 * mat1;
+
+    fmt::print("{}\n", res0);
+}
+
 int main() {
+    TestMat();
+
+    //return 0;
+
     auto scenePtr = std::make_shared<Gfx::Scene>();
 
     auto &scene = *scenePtr;
@@ -18,7 +43,7 @@ int main() {
       << Gfx::Material{
         .albedo = Gfx::Material::AlbedoUVFunc{
           .uvFunc = [](const Math::Vector<Gfx::Real, 2> &uv) -> Gfx::RGBSpectrum {
-              const auto &[u, v] = uv.impl.data;
+              const auto &[u, v] = uv.implData();
               return {{u, v, 1. - u - v}};
           }
         }
@@ -45,22 +70,22 @@ int main() {
         Gfx::Point{{-1, 1, -1}},
         Gfx::Point{{-1, 1, 1}},
         Gfx::Point{{-1.5, 2, 0}}});
-      /*<< Gfx::Shape::Triangle(0, {
-        Gfx::Point{{-k, k, -k}},
-        Gfx::Point{{k, k, -k}},
-        Gfx::Point{{-k, k, k}}})
-      << Gfx::Shape::Triangle(0, {
-        Gfx::Point{{k, k, -k}},
-        Gfx::Point{{k, k, k}},
-        Gfx::Point{{-k, k, k}}})
-      << Gfx::Shape::Triangle(0, {
-        Gfx::Point{{-k, -k, k}},
-        Gfx::Point{{k, -k, k}},
-        Gfx::Point{{-k, k, k}}})
-      << Gfx::Shape::Triangle(0, {
-        Gfx::Point{{k, -k, k}},
-        Gfx::Point{{k, k, k}},
-        Gfx::Point{{-k, k, k}}});*/
+    /*<< Gfx::Shape::Triangle(0, {
+      Gfx::Point{{-k, k, -k}},
+      Gfx::Point{{k, k, -k}},
+      Gfx::Point{{-k, k, k}}})
+    << Gfx::Shape::Triangle(0, {
+      Gfx::Point{{k, k, -k}},
+      Gfx::Point{{k, k, k}},
+      Gfx::Point{{-k, k, k}}})
+    << Gfx::Shape::Triangle(0, {
+      Gfx::Point{{-k, -k, k}},
+      Gfx::Point{{k, -k, k}},
+      Gfx::Point{{-k, k, k}}})
+    << Gfx::Shape::Triangle(0, {
+      Gfx::Point{{k, -k, k}},
+      Gfx::Point{{k, k, k}},
+      Gfx::Point{{-k, k, k}}});*/
 
 
     Gfx::ContinuousRenderer renderer(scenePtr, 960, 720, "asdasd");

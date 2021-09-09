@@ -65,7 +65,7 @@ class CameraBody {
     std::pair<Real, Real> muSK{0., 0.06};
 
     Point orientation{{0, 0, 0}};
-    Math::Matrix<Real, 3, 3> rotationMatrix{{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
+    Math::Matrix<Real, 3, 3> rotationMatrix{{1, 0, 0, 0, 1, 0, 0, 0, 1}};
 
     Environment environment{
       .gravity = 9.80665,
