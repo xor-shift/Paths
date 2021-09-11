@@ -4,6 +4,9 @@
 
 #define LIBGFX_ENABLE_NORMAL_CHECKS
 
+//#define LIBGFX_EMBED_RAY_STATS
+//#define LIBGFX_WHITTED_DISPLAY_TCOUNT
+
 namespace Gfx {
 
 typedef double Real;

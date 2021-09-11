@@ -17,6 +17,10 @@ class Whitted {
         if (!isectionOpt) return {};
         const auto &isection = *isectionOpt;
 
+#ifdef LIBGFX_WHITTED_DISPLAY_TCOUNT
+        return RGBSpectrum{{static_cast<double>(std::clamp(isection.stats.traversals, 0ul, 255ul)) / 255., 0, 0}};
+#endif
+
         const auto &mat = scene.GetMaterial(isection.matIndex);
         const bool goingIn = Math::Dot(isection.normal, ray.direction) < 0;
         const auto orientedNormal = isection.normal * (goingIn ? 1 : -1);

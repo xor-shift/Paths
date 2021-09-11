@@ -202,7 +202,16 @@ std::optional<Intersection> BuiltBVH::Intersect(const Ray &ray) const {
 
     const auto &nodes = nodeLists[ray.majorDirection];
 
+#ifdef LIBGFX_EMBED_RAY_STATS
+    size_t traversals = 0;
+#endif
+
     for (size_t idx = 0; idx != Impl::ThreadedBVHNode::nLink;) {
+
+#ifdef LIBGFX_EMBED_RAY_STATS
+        ++traversals;
+#endif
+
         auto &node = nodes[idx];
 
         if (Shape::AABox::EIntersects(node.bounds, ray)) {
@@ -217,6 +226,10 @@ std::optional<Intersection> BuiltBVH::Intersect(const Ray &ray) const {
             idx = node.links[1];
         }
     }
+
+#ifdef LIBGFX_EMBED_RAY_STATS
+    if (chosenIntersection) chosenIntersection->stats.traversals = traversals;
+#endif
 
     return chosenIntersection;
 }
