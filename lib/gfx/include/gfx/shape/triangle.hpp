@@ -46,7 +46,7 @@ struct TriangleImpl {
         const auto h = Math::Cross(ray.direction, edges[1]);
         const auto a = Math::Dot(edges[0], h);
 
-        if (std::abs(a) <= Epsilon) return std::nullopt;
+        if (std::abs(a) <= sensibleEps) return std::nullopt;
 
         const auto f = 1. / a;
 
@@ -59,7 +59,7 @@ struct TriangleImpl {
         if (v < 0 || (parallelogram ? v > 1 : u + v > 1)) return std::nullopt;
 
         const auto t = f * Math::Dot(edges[1], q);
-        if (t <= Epsilon) return std::nullopt;
+        if (t <= sensibleEps) return std::nullopt;
 
         return Intersection(ray, matIndex, t, normal, {{u, v}});
     }

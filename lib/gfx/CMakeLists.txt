@@ -5,7 +5,8 @@ add_library(${PROJECT_NAME} SHARED
         src/camera/body.cpp
         src/camera/camera.cpp
         src/image.cpp
-        src/scene.cpp
+        src/scene/bvh.cpp
+        src/scene/scene.cpp
         src/stl/binary.cpp
         src/stl/common.cpp
         )

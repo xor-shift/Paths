@@ -20,7 +20,7 @@ class Whitted {
         const auto &mat = scene.GetMaterial(isection.matIndex);
         const bool goingIn = Math::Dot(isection.normal, ray.direction) < 0;
         const auto orientedNormal = isection.normal * (goingIn ? 1 : -1);
-        const auto offsetIPoint = isection.intersectionPoint + orientedNormal * Epsilon;
+        const auto offsetIPoint = isection.intersectionPoint + orientedNormal * sensibleEps;
 
         RGBSpectrum omega{{.2, .2, .2}};
         for (const auto &light : pointLights) {

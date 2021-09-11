@@ -12,11 +12,7 @@
 int main() {
     auto scenePtr = std::make_shared<Gfx::Scene>();
 
-    Gfx::STL::InsertIntoScene(*scenePtr, Gfx::STL::Binary::ReadFile("teapot.stl"), 0, {{0, 0, 25}});
-
     auto &scene = *scenePtr;
-
-    constexpr auto k = 5;
 
     scene
       << Gfx::Material{
@@ -29,7 +25,9 @@ int main() {
       }
       << Gfx::Material{
         .albedo = Gfx::Material::AlbedoDirect{.albedo{{1, 0, 0}}}
-      }
+      };
+
+    scene
       << Gfx::Shape::Plane{
         .center{{0, -1, 0}},
         .normal{{0, 1, 0}},
@@ -49,23 +47,9 @@ int main() {
         Gfx::Point{{-1, 1, -1}},
         Gfx::Point{{-1, 1, 1}},
         Gfx::Point{{-1.5, 2, 0}}});
-    /*<< Gfx::Shape::Triangle(0, {
-      Gfx::Point{{-k, k, -k}},
-      Gfx::Point{{k, k, -k}},
-      Gfx::Point{{-k, k, k}}})
-    << Gfx::Shape::Triangle(0, {
-      Gfx::Point{{k, k, -k}},
-      Gfx::Point{{k, k, k}},
-      Gfx::Point{{-k, k, k}}})
-    << Gfx::Shape::Triangle(0, {
-      Gfx::Point{{-k, -k, k}},
-      Gfx::Point{{k, -k, k}},
-      Gfx::Point{{-k, k, k}}})
-    << Gfx::Shape::Triangle(0, {
-      Gfx::Point{{k, -k, k}},
-      Gfx::Point{{k, k, k}},
-      Gfx::Point{{-k, k, k}}});*/
 
+    Gfx::STL::InsertIntoScene(scene, Gfx::STL::Binary::ReadFile("teapot.stl"), 0, {{0, 0, 25}});
+    scene.Finalize();
 
     Gfx::ContinuousRenderer renderer(scenePtr, 960, 720, "asdasd");
     renderer.Join();

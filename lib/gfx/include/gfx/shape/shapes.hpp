@@ -12,5 +12,6 @@
 namespace Gfx::Shape {
 
 typedef std::variant<AABox, Plane, Triangle, Parallelogram, Sphere> Shape;
+typedef std::variant<AABox, Triangle, Parallelogram, Sphere> BoundableShape;
 
 }

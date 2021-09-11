@@ -22,14 +22,8 @@ struct AABox {
         }
     }
 
-  public:
-    constexpr AABox(Point min, Point max, size_t matIndex) noexcept
-      : extents(min, max)
-        , center((min + max) / 2.)
-        , matIndex(matIndex) {}
-
     template<bool getDistance = false>
-    [[nodiscard]] constexpr auto Intersects(const Ray &ray) const noexcept {
+    [[nodiscard]] static constexpr auto IntersectsImpl(const std::pair<Point, Point> &extents, const Ray &ray) noexcept {
         Real
           tMin = std::numeric_limits<Real>::min(),
           tMax = std::numeric_limits<Real>::max();
@@ -44,6 +38,17 @@ struct AABox {
 
         return Func<getDistance>(tMin, tMax);
     }
+
+  public:
+    constexpr AABox(Point min, Point max, size_t matIndex) noexcept
+      : extents(min, max)
+        , center((min + max) / 2.)
+        , matIndex(matIndex) {}
+
+    static constexpr bool EIntersects(const std::pair<Point, Point> &extents, const Ray &ray) noexcept { return IntersectsImpl<false>(extents, ray); }
+
+    template<bool getDistance = false>
+    [[nodiscard]] constexpr auto Intersects(const Ray &ray) const noexcept { return IntersectsImpl<getDistance>(extents, ray); }
 
     /**
      * Does not calculate UV coordinates
@@ -75,5 +80,19 @@ struct AABox {
     //satisfy Shape
     const std::size_t matIndex;
 };
+
+/**
+ * Checks if b0 contains b1
+ * @param b0
+ * @param b1
+ * @return
+ */
+constexpr bool InBounds(const std::pair<Point, Point> &b0, const std::pair<Point, Point> &b1) {
+    for (size_t i = 0; i < Point::vectorSize; i++) {
+        if (b0.first[i] > b1.first[i]) return false;
+        if (b0.second[i] < b1.second[i]) return false;
+    }
+    return true;
+}
 
 }

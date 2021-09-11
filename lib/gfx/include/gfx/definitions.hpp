@@ -7,11 +7,13 @@
 namespace Gfx {
 
 typedef double Real;
+static constexpr Real inf = std::numeric_limits<Real>::infinity();
+static constexpr Real eps = std::numeric_limits<Real>::epsilon();
+static constexpr Real sensibleInf = static_cast<Real>(1e20);
+static constexpr Real sensibleEps = static_cast<Real>(0.000001);
 
 typedef Math::Vector<Real, 3> Point;
-
-static constexpr Real Epsilon = static_cast<Real>(0.000001);
-static constexpr Point EpsilonVector({Epsilon, Epsilon, Epsilon});
+static constexpr Point EpsilonVector({sensibleEps, sensibleEps, sensibleEps});
 
 }
 

@@ -22,7 +22,7 @@ struct Plane {
 
         const auto denom = Math::Dot(normal, ray.direction);
 
-        if (std::abs(denom) <= Epsilon) return std::nullopt;
+        if (std::abs(denom) <= sensibleEps) return std::nullopt;
 
         return Intersection(ray, matIndex, Math::Dot(center - ray.origin, normal) / denom, normal, {{0, 0}});
     }
