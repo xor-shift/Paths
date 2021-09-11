@@ -15,20 +15,10 @@ class Scene {
 
     ~Scene() = default;
 
-    Scene &operator<<(Shape::Shape &&shape) {
-        //std::visit([this]<Concepts::Shape T> (T &&s) {
-        std::visit([this](auto &&s)
-        requires Concepts::Shape<std::decay_t<decltype(s)>>
-        {
-            typedef std::decay_t<decltype(s)> T; //i blame clion formatting
-
-            if constexpr (Concepts::Boundable<T>) {
-                //boundableShapes.emplace_back(s);
-                bvh << std::forward<T>(s);
-            } else {
-                unboundableShapes.emplace_back(std::forward<T>(s));
-            }
-        }, std::forward<Shape::Shape>(shape));
+    template<typename T>
+    requires (Concepts::Shape<std::decay_t<T>> && !Concepts::Boundable<T>)
+    Scene &operator<<(T &&shape) {
+        unboundableShapes.emplace_back(std::forward<T>(shape));
         return *this;
     }
 
@@ -38,37 +28,31 @@ class Scene {
     }
 
     [[nodiscard]] std::optional<Intersection> Intersect(const Ray &ray) const {
-        std::optional<Intersection> intersection{std::nullopt};
-        Real closest = std::numeric_limits<Real>::max();
+        std::optional<Intersection> chosenIntersection{std::nullopt};
 
-        auto Visitor = [ray, &closest, &intersection]<Concepts::Shape T>(const T &shape) -> void {
+        auto Visitor = [&ray, &chosenIntersection]<Concepts::Shape T>(const T &shape) -> void {
             std::optional<Intersection> res = shape.Intersect(ray);
-            if (res && res->distance >= 0. && res->distance < closest) {
-                closest = res->distance;
-                intersection.emplace(std::move(*res));
-            }
+            Intersection::Replace(chosenIntersection, shape.Intersect(ray));
         };
 
         for (const auto &shape : unboundableShapes) std::visit(Visitor, shape);
 
-        if (auto bvhRes = bvh.Intersect(ray); bvhRes && bvhRes->distance >= 0 && bvhRes->distance < closest) {
-            closest = bvhRes->distance;
-            intersection.emplace(std::move(*bvhRes));
-        }
+        for (const auto &bbvh : bbvhs) Intersection::Replace(chosenIntersection, bbvh.Intersect(ray));
 
-        return intersection;
+        return chosenIntersection;
     }
-
-    void Finalize() { bvh.Finalize(); }
 
     [[nodiscard]] const Material &GetMaterial(std::size_t idx) const noexcept { return materials[idx]; }
 
+    void InsertBBVH(BuiltBVH &&bvh) {
+        bbvhs.push_back(std::move(bvh));
+    }
+
   private:
-    std::vector<Shape::Shape> unboundableShapes;
-    std::vector<Shape::BoundableShape> boundableShapes;
     std::vector<Material> materials;
 
-    BVH bvh{31, 2};
+    std::vector<Shape::Shape> unboundableShapes;
+    std::vector<BuiltBVH> bbvhs{};
 };
 
 }

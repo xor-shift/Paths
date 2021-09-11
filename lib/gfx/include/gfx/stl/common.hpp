@@ -21,6 +21,10 @@ struct Triangle {
     }
 };
 
-extern void InsertIntoScene(Scene &scene, const std::vector<Triangle> &triangles, size_t matIndex, const Point &offset = {{0, 0, 0}}, const Math::Matrix<Real, 3, 3> &transform = {{1, 0, 0, 0, 1, 0, 0, 0, 1}});
+inline void InsertIntoGeneric(auto &generic, const std::vector<Triangle> &triangles, size_t matIndex, const Point &offset = {{0, 0, 0}}, const Math::Matrix<Real, 3, 3> &transform = {{1, 0, 0, 0, 1, 0, 0, 0, 1}}) {
+    for (const auto &t : triangles) {
+        generic << t.ToTriangle(matIndex, offset, transform);
+    }
+}
 
 }

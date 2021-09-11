@@ -49,7 +49,7 @@ struct VecCrossProduct : public VectorExpr<typename E0::value_type, VecCrossProd
 };
 
 template<Concepts::VectorExpression E0, Concepts::VectorExpression E1, typename Op> requires (E0::vectorSize == E1::vectorSize)
-  struct VecBinaryExpr : public VectorExpr<typename E0::value_type, VecBinaryExpr<E0, E1, Op>> {
+struct VecBinaryExpr : public VectorExpr<typename E0::value_type, VecBinaryExpr<E0, E1, Op>> {
     using base_type = VectorExpr<typename E0::value_type, VecBinaryExpr<E0, E1, Op>>;
     typedef typename E0::value_type value_type;
     static constexpr size_t vectorSize = E0::vectorSize;
@@ -108,7 +108,8 @@ struct Vector : public Impl::VectorExpr<T, Vector<T, N>> {
     constexpr Vector() noexcept
       : impl({}) {}
 
-    template<Concepts::VectorExpression E> requires (E::vectorSize == vectorSize)
+    template<Concepts::VectorExpression E>
+    requires (E::vectorSize == vectorSize)
     constexpr Vector(const E &expr) noexcept {
         for (size_t i = 0; i < N; i++)
             impl[i] = static_cast<T>(expr[i]);
@@ -184,6 +185,9 @@ constexpr inline auto operator-(const E0 &e0) { return Impl::VecUnaryExpr(e0, []
 
 template<Concepts::VectorExpression E0>
 constexpr inline auto Reciprocal(const E0 &e0) { return Impl::VecUnaryExpr(e0, [](auto v) { return 1. / v; }); }
+
+template<Concepts::VectorExpression E0>
+constexpr inline auto Abs(const E0 &e0) { return Impl::VecUnaryExpr(e0, [](auto v) { return std::abs(v); }); }
 
 ///////////////////////////////////////
 //// Element-wise binary operators ////

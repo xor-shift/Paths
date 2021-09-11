@@ -32,7 +32,11 @@ int main() {
         .center{{0, -1, 0}},
         .normal{{0, 1, 0}},
         .matIndex = 1,
-      }
+      };
+
+    Gfx::BVHBuilder builder;
+
+    builder
       << Gfx::Shape::Triangle(0, {
         Gfx::Point{{0, 2, 1}},
         Gfx::Point{{1, 2, 1}},
@@ -48,8 +52,10 @@ int main() {
         Gfx::Point{{-1, 1, 1}},
         Gfx::Point{{-1.5, 2, 0}}});
 
-    Gfx::STL::InsertIntoScene(scene, Gfx::STL::Binary::ReadFile("teapot.stl"), 0, {{0, 0, 25}});
-    scene.Finalize();
+    Gfx::STL::InsertIntoGeneric(builder, Gfx::STL::Binary::ReadFile("teapot.stl"), 0, {{0, 0, 25}});
+    auto builtBVH = builder.Build();
+
+    scene.InsertBBVH(std::move(builtBVH));
 
     Gfx::ContinuousRenderer renderer(scenePtr, 960, 720, "asdasd");
     renderer.Join();
