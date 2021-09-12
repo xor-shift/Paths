@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.21)
 project(Paths)
 
+set(CONAN_COMPILER clang)
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+
 find_package(SFML 2.5 REQUIRED COMPONENTS graphics window network audio system)
 find_package(ImGui-SFML REQUIRED)
 find_package(OpenMP REQUIRED)
@@ -8,7 +12,6 @@ find_package(OpenMP REQUIRED)
 set(CMAKE_CXX_STANDARD 23)
 
 add_subdirectory(lib)
-add_subdirectory(thirdparty/gcem)
 
 set(Paths_headers
         )
@@ -21,8 +24,6 @@ add_executable(Paths ${Paths_headers} ${Paths_sources})
 
 target_include_directories(Paths PRIVATE
         lib/gfx/include
-        ./thirdparty/gcem/include
-        #${SFML_INCLUDE_DIR}
         )
 
 target_link_libraries(Paths

@@ -6,6 +6,8 @@ A path/ray tracer (no path tracing as of now)
 
 - [{fmt}](https://github.com/fmtlib/fmt), Used for text output
 - [SFML](https://github.com/SFML/sfml), Used to display rendered images to the screen, might switch to something lighter that gets this job done later on
+- ImGui, Used for UI alongside:
+- ImGui-SFML
 
 ## Project layout
 
