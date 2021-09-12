@@ -63,7 +63,7 @@ struct ChainedUnaryFilter {
     ChainedUnaryFilter(Ts &&...fs)
       : fs(std::make_tuple(std::forward<Ts>(fs)...)) {}
 
-    RGBSpectrum operator()(RGBSpectrum s) const noexcept { return std::apply([&s](auto &&...f) -> RGBSpectrum { return ((s = f(s)), ...); }, fs); }
+    RGBSpectrum operator()(RGBSpectrum s) const noexcept { return std::apply([s](auto &&...f) mutable -> RGBSpectrum { return ((s = f(s)), ...); }, fs); }
 
   private:
     const TupleType fs;

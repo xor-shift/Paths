@@ -14,24 +14,36 @@
 
 namespace Gfx {
 
-template<Concepts::Sampler T>
+template<Concepts::Sampler T, bool takeAverage>
 class SamplerWrapperIntegrator {
+    void StartThreads() {
+#ifdef LIBGFX_SWRP_SINGLE_THREAD
+        const auto conc = 1;
+#else
+        const auto conc = std::thread::hardware_concurrency() * 3 / 4;
+#endif
+
+        rendererWorkerThread = std::thread([this, conc] { rendererWorkerPool.Work(conc); });
+        btfWorkerThread = std::thread([this, conc] { btfWorkerPool.Work(conc); });
+    }
+
   public:
     typedef T sampler_type;
 
     explicit SamplerWrapperIntegrator(sampler_type &&sampler) requires std::is_move_constructible_v<sampler_type>
-      : sampler(std::move(sampler))
-        , workerPool(&Worker, 16) {
-        workerThread = std::thread([this] {
-            const auto conc = std::thread::hardware_concurrency();
-            workerPool.Work(conc * 3 / 4);
-        });
-    }
+      : sampler(std::move(sampler)) { StartThreads(); }
+
+    SamplerWrapperIntegrator() requires std::is_default_constructible_v<sampler_type>
+      : sampler({}) { StartThreads(); }
 
     ~SamplerWrapperIntegrator() {
-        workerPool.Close();
-        if (workerThread.joinable())
-            workerThread.join();
+        rendererWorkerPool.Close();
+        if (rendererWorkerThread.joinable())
+            rendererWorkerThread.join();
+
+        btfWorkerPool.Close();
+        if (btfWorkerThread.joinable())
+            btfWorkerThread.join();
     }
 
     void Setup(Math::Vector<size_t, 2> dimensions) {
@@ -44,21 +56,28 @@ class SamplerWrapperIntegrator {
     }
 
     void SetRenderOptions(RenderOptions opts) {
+        ResetBackBuffer();
         renderOptions = opts;
     }
 
     Gfx::Image GetRender() {
-        workerPool.SplitWork(backBuffer.Height(), 8, [this](size_t start, size_t end) {
-            return WorkItem{
+        auto workProducer = [this](size_t start, size_t end) {
+            return RendererWorkItem{
               .sampler = *this,
               .startRow = start,
               .endRow = end,
             };
-        });
+        };
 
-        workerPool.WGWait();
+        rendererWorkerPool.SplitWork(backBuffer.Height(), 8, workProducer);
+        rendererWorkerPool.WGWait();
 
-        return backBuffer;
+        framesRendered += 1.;
+
+        btfWorkerPool.SplitWork(backBuffer.Height(), 8, workProducer);
+        btfWorkerPool.WGWait();
+
+        return frontBuffer;
     }
 
   private:
@@ -67,16 +86,34 @@ class SamplerWrapperIntegrator {
     RenderOptions renderOptions{};
     std::shared_ptr<Scene> scene{nullptr};
 
-    std::mutex frontBufferMutex{};
     Gfx::Image frontBuffer{};
     Gfx::Image backBuffer{};
+    Real framesRendered = 0;
 
-    struct WorkItem {
-        SamplerWrapperIntegrator<sampler_type> &sampler;
+    void ResetBackBuffer() {
+        framesRendered = 0.;
+        backBuffer = Gfx::Image(frontBuffer.dimensions);
+    }
+
+    struct RendererWorkItem {
+        SamplerWrapperIntegrator<sampler_type, takeAverage> &sampler;
         size_t startRow, endRow;
     };
 
-    static void Worker(WorkItem &&item) {
+    static void BackToFrontWorker(RendererWorkItem &&item) noexcept {
+        for (size_t row = item.startRow; row != item.endRow; row++) {
+            for (size_t col = 0; col < item.sampler.backBuffer.Width(); col++) {
+                if constexpr (!takeAverage) {
+                    item.sampler.frontBuffer.At({{col, row}}) = item.sampler.backBuffer.At({{col, row}});
+                    item.sampler.backBuffer.At({{col, row}}) = {{0}};
+                } else {
+                    item.sampler.frontBuffer.At({{col, row}}) = item.sampler.backBuffer.At({{col, row}}) / item.sampler.framesRendered;
+                }
+            }
+        }
+    }
+
+    static void RendererWorker(RendererWorkItem &&item) noexcept {
         const auto &renderOptions = item.sampler.renderOptions;
         const auto &sampler = item.sampler.sampler;
         const auto &scene = item.sampler.scene;
@@ -94,13 +131,15 @@ class SamplerWrapperIntegrator {
 
                 const Ray ray(renderOptions.position, renderOptions.rotation * Math::Normalized(Point{{rayX, rayY, d}}));
 
-                backBuffer.At({{x, row}}) = sampler.Sample(*scene, ray);
+                backBuffer.At({{x, row}}) += sampler.Sample(*scene, ray);
             }
         }
     }
 
-    WorkerPoolWG<decltype(&SamplerWrapperIntegrator<sampler_type>::Worker), WorkItem> workerPool;
-    std::thread workerThread;
+    WorkerPoolWG<decltype(&SamplerWrapperIntegrator<sampler_type, takeAverage>::RendererWorker), RendererWorkItem> rendererWorkerPool{&RendererWorker, 16};
+    std::thread rendererWorkerThread;
+    WorkerPoolWG<decltype(&SamplerWrapperIntegrator<sampler_type, takeAverage>::BackToFrontWorker), RendererWorkItem> btfWorkerPool{&BackToFrontWorker, 16};
+    std::thread btfWorkerThread;
 };
 
 }

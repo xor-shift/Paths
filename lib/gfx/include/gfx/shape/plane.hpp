@@ -10,25 +10,41 @@
 
 namespace Gfx::Shape {
 
-struct Plane {
-    /**
-     * Does not calculate UV coordinates (by necessity)
-     * @param ray
-     * @return
-     */
+class Disc;
+
+class Plane {
+    friend class Disc;
+
+    const Point center{};
+    const Point normal{};
+
+  public:
+
+    constexpr Plane(Point center, Point normal, size_t matIndex)
+      : center(center)
+        , normal(normal)
+        , matIndex(matIndex) {}
+
     [[nodiscard]] constexpr std::optional<Intersection> Intersect(const Ray &ray) const noexcept {
+        LIBGFX_NORMAL_CHECK(ray.direction);
+        LIBGFX_NORMAL_CHECK(normal);
+
+        auto t = IntersectImpl(ray);
+        if (t < 0) return std::nullopt;
+
+        return Intersection(ray, matIndex, t, normal, {{0, 0}});
+    }
+
+    [[nodiscard]] constexpr Real IntersectImpl(const Ray &ray) const noexcept {
         LIBGFX_NORMAL_CHECK(ray.direction);
         LIBGFX_NORMAL_CHECK(normal);
 
         const auto denom = Math::Dot(normal, ray.direction);
 
-        if (std::abs(denom) <= sensibleEps) return std::nullopt;
+        if (std::abs(denom) <= sensibleEps) return -1;
 
-        return Intersection(ray, matIndex, Math::Dot(center - ray.origin, normal) / denom, normal, {{0, 0}});
+        return Math::Dot(center - ray.origin, normal) / denom;
     }
-
-    const Point center{};
-    const Point normal{};
 
     const std::size_t matIndex{0};
 };

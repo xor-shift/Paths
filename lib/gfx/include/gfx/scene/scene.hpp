@@ -16,7 +16,7 @@ class Scene {
     ~Scene() = default;
 
     template<typename T>
-    requires (Concepts::Shape<std::decay_t<T>> && !Concepts::Boundable<T>)
+    requires (Concepts::Shape<std::decay_t<T>>/* && !Concepts::Boundable<T>*/)
     Scene &operator<<(T &&shape) {
         unboundableShapes.emplace_back(std::forward<T>(shape));
         return *this;

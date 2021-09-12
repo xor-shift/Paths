@@ -206,7 +206,7 @@ std::optional<Intersection> BuiltBVH::Intersect(const Ray &ray) const {
     size_t traversals = 0;
 #endif
 
-    for (size_t idx = 0; idx != Impl::ThreadedBVHNode::nLink;) {
+    for (size_t idx = 0; idx < nodes.size();) {
 
 #ifdef LIBGFX_EMBED_RAY_STATS
         ++traversals;

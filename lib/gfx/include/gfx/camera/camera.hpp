@@ -28,7 +28,8 @@ class ContinuousRenderer {
     sf::RenderWindow window;
     std::thread rendererThread{};
 
-    SamplerWrapperIntegrator<Sampler::Whitted> integrator{Sampler::Whitted{}};
+    SamplerWrapperIntegrator<Sampler::PT, true> contRenderIntegrator{};
+    std::unique_ptr<SamplerWrapperIntegrator<Sampler::PT, false>> fullRenderIntegrator{nullptr};
     std::shared_ptr<Scene> scene;
 
     struct {

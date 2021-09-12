@@ -4,8 +4,6 @@ project(paths_lib
         DESCRIPTION "Paths libraries"
         HOMEPAGE_URL "https://example.com/")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wall -Wextra")
-
 add_subdirectory(maths)
 add_subdirectory(utils)
 add_subdirectory(gfx)

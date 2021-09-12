@@ -15,8 +15,8 @@ ContinuousRenderer::ContinuousRenderer(std::shared_ptr<Scene> scene, unsigned in
 
     intermediates.image.create(width, height);
 
-    integrator.SetScene(scene);
-    integrator.Setup({{width, height}});
+    contRenderIntegrator.SetScene(scene);
+    contRenderIntegrator.Setup({{width, height}});
 
     window.setActive(false);
     rendererThread = std::thread([this] {
@@ -32,7 +32,7 @@ ContinuousRenderer::ContinuousRenderer(std::shared_ptr<Scene> scene, unsigned in
             size_t startRow, endRow;
         };
 
-        auto ConverterWorkerFn = [this, &filter](ConverterWorkItem &&item) {
+        auto ConverterWorkerFn = [this, filter](ConverterWorkItem item) {
             for (size_t y = item.startRow; y < item.endRow; y++) {
                 for (size_t x = 0; x < item.image.Width(); x++) {
                     auto col = filter(item.image.At({{x, y}})) * 255;
@@ -52,12 +52,16 @@ ContinuousRenderer::ContinuousRenderer(std::shared_ptr<Scene> scene, unsigned in
         WorkerPoolWG<decltype(ConverterWorkerFn), ConverterWorkItem> converterWorker(std::move(ConverterWorkerFn), 64);
 
         std::thread converterWorkerThread{[&converterWorker] {
+#ifdef LIBGFX_SWRP_SINGLE_THREAD
+            converterWorker.Work(1);
+#else
             converterWorker.Work(8);
+#endif
         }};
 
         auto ImageRender = [&] {
             if (contRendering) {
-                auto render = integrator.GetRender();
+                auto render = contRenderIntegrator.GetRender();
 
                 converterWorker.SplitWork(render.Height(), 8, [&render](size_t start, size_t end) {
                     return ConverterWorkItem{
@@ -89,7 +93,7 @@ ContinuousRenderer::ContinuousRenderer(std::shared_ptr<Scene> scene, unsigned in
 
             ImGui::SFML::Update(window, dt);
             if (cameraParticle.TickSFML(window, dt.asSeconds(), 50.)) {
-                integrator.SetRenderOptions({
+                contRenderIntegrator.SetRenderOptions({
                                               .position{cameraParticle.position},
                                               .rotation{cameraParticle.Rotation()},
                                             });

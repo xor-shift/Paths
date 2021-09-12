@@ -34,8 +34,11 @@ struct TriangleImpl {
       : vertices(vertices)
         , edges({vertices[1] - vertices[0], vertices[2] - vertices[0]})
         , normal(Math::Normalized(Math::Cross(edges[0], edges[1])))
-        , extents(Math::Min(Math::Min(vertices[0], vertices[1]), vertices[2]),
-                  Math::Max(Math::Max(vertices[0], vertices[1]), vertices[2]))
+        , extents(parallelogram
+                  ? std::pair<Point, Point>{Math::Min(Math::Min(vertices[0], vertices[1]), vertices[2]),
+                                            vertices[0] + (edges[0] + edges[1])}
+                  : std::pair<Point, Point>{Math::Min(Math::Min(vertices[0], vertices[1]), vertices[2]),
+                                            Math::Max(Math::Max(vertices[0], vertices[1]), vertices[2])})
         , center(parallelogram ? (extents.first + extents.second) / 2. : PVecCalcCenter(vertices))
         , matIndex(matIndex) {}
 

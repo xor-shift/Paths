@@ -34,4 +34,13 @@ constexpr inline auto operator*(const ME &me, const VE &ve) { return Impl::MatVe
 template<Concepts::MatrixExpression ME, Concepts::VectorExpression VE>
 constexpr inline auto operator*(const VE &ve, const ME &me) { return Impl::MatVecProductExpr(me, ve); }
 
+template<Concepts::VectorExpression VE>
+constexpr inline Matrix<typename VE::value_type, 3, 3> SSC(const VE &v) noexcept {
+    return {{
+        0, -v[2], v[1],
+        v[2], 0, -v[0],
+        -v[1], v[0], 0,
+    }};
+}
+
 }

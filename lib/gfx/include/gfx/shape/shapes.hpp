@@ -3,6 +3,7 @@
 #include "shape.hpp"
 
 #include "aabox.hpp"
+#include "disc.hpp"
 #include "plane.hpp"
 #include "sphere.hpp"
 #include "triangle.hpp"
@@ -11,7 +12,7 @@
 
 namespace Gfx::Shape {
 
-typedef std::variant<AABox, Plane, Triangle, Parallelogram, Sphere> Shape;
-typedef std::variant<AABox, Triangle, Parallelogram, Sphere> BoundableShape;
+typedef std::variant<AABox, Disc, Parallelogram, Plane, Sphere, Triangle> Shape;
+typedef std::variant<AABox, Disc, Parallelogram, Sphere, Triangle> BoundableShape;
 
 }

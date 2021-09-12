@@ -97,6 +97,22 @@ struct MatrixMultExpr : public MatrixExpr<typename E0::value_type, MatrixMultExp
     const E1 &e1;
 };
 
+template<Concepts::MatrixExpression E0>
+struct MatrixTransposeExpr {
+    typedef typename E0::value_type value_type;
+    static constexpr size_t
+      rows = E0::cols,
+      cols = E0::rows;
+
+    explicit constexpr MatrixTransposeExpr(const E0 &e0)
+      : e0(e0) {}
+
+    [[nodiscard]] constexpr value_type At(size_t i, size_t j) const noexcept { return e0.At(j, i); }
+
+  private:
+    const E0 &e0;
+};
+
 }
 
 template<typename T, size_t M, size_t N>
@@ -128,6 +144,8 @@ struct Matrix : public Impl::MatrixExpr<T, Matrix<T, M, N>> {
     constexpr Matrix(const flat_type &data) noexcept { std::copy(data, data + M * N, impl); }
 
     constexpr value_type At(size_t j, size_t i) const noexcept { return impl[i + j * N]; }
+
+    constexpr value_type &At(size_t j, size_t i) noexcept { return impl[i + j * N]; }
 
     static Matrix Rotation(double theta) requires (M == 2 && N == 2) {
         T sinTheta = std::sin(theta),
@@ -169,23 +187,39 @@ struct Matrix : public Impl::MatrixExpr<T, Matrix<T, M, N>> {
     }
 };
 
+template<typename T, size_t n>
+constexpr inline Matrix<T, n, n> Identity() noexcept {
+    Matrix<T, n, n> mat{{0}};
+
+    for (size_t i = 0; i < n; i++) mat.At(i, i) = 1;
+
+    return mat;
+}
+
 //////////////////////////////////////
 //// Element-wise unary operators ////
 //////////////////////////////////////
 
 template<Concepts::MatrixExpression E0, typename U>
 requires std::is_convertible_v<U, typename E0::value_type>
-constexpr inline auto operator*(const E0 &e0, const U s) { return Impl::MatrixUnaryExpr(e0, [s](auto v) { return v * s; }); }
+constexpr inline auto operator*(const E0 &e0, const U s) noexcept { return Impl::MatrixUnaryExpr(e0, [s](auto v) { return v * s; }); }
 
 template<Concepts::MatrixExpression E0, typename U>
 requires std::is_convertible_v<U, typename E0::value_type>
-constexpr inline auto operator/(const E0 &e0, const U s) { return Impl::MatrixUnaryExpr(e0, [s](auto v) { return v / s; }); }
+constexpr inline auto operator/(const E0 &e0, const U s) noexcept { return Impl::MatrixUnaryExpr(e0, [s](auto v) { return v / s; }); }
 
 template<Concepts::MatrixExpression E0>
-constexpr inline auto operator-(const E0 &e0) { return Impl::MatrixUnaryExpr(e0, [](auto v) { return -v; }); }
+constexpr inline auto operator-(const E0 &e0) noexcept { return Impl::MatrixUnaryExpr(e0, [](auto v) { return -v; }); }
 
 template<Concepts::MatrixExpression E0>
-constexpr inline auto Reciprocal(const E0 &e0) { return Impl::MatrixUnaryExpr(e0, [](auto v) { return 1. / v; }); }
+constexpr inline auto Reciprocal(const E0 &e0) noexcept { return Impl::MatrixUnaryExpr(e0, [](auto v) { return 1. / v; }); }
+
+/*template<Concepts::MatrixExpression E0, typename U>
+requires std::is_convertible_v<U, typename E0::value_type>
+constexpr inline auto Pow(const E0 &e0, const U s) noexcept { return Impl::MatrixUnaryExpr(e0, [s](auto v) { return std::pow(v, s); }); }*/
+
+template<Concepts::MatrixExpression E0>
+constexpr inline auto Transpose(const E0 &e0) noexcept { return Impl::MatrixTransposeExpr(e0); }
 
 ///////////////////////////////////////
 //// Element-wise binary operators ////

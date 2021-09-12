@@ -15,18 +15,16 @@ struct RayStats {
 #endif
 
 struct Ray {
-    constexpr Ray(
-      Point origin,
-      Point direction)
+    constexpr Ray(Point origin, Point direction)
       : origin(origin)
         , direction(direction)
         , directionReciprocals(Math::Reciprocal(direction))
         , majorDirection(MajorDirection(direction)) {}
 
-    const Point origin;
-    const Point direction;
-    const Point directionReciprocals;
-    const size_t majorDirection;
+    Point origin;
+    Point direction;
+    Point directionReciprocals;
+    size_t majorDirection;
 
   private:
     static constexpr size_t MajorDirection(const Point &direction) noexcept {
@@ -62,7 +60,7 @@ struct Intersection {
         , normal(normal)
         , uv(uv)
 #ifdef LIBGFX_EMBED_RAY_STATS
-      , stats(stats)
+    , stats(stats)
 #endif
     {}
 

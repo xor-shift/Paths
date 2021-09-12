@@ -113,13 +113,23 @@ inline Math::Vector<double, 2> SampleNormalMP(double mu = 0, double sigma = 1) n
 inline Math::Vector<double, 2> SampleSNDNormalMP() noexcept { return SampleNormalMP(); }
 
 inline Math::Vector<double, 3> D3RandomUnitVector() {
-    const auto sample = SampleNormalMP();
-    const auto rhs = std::sqrt(1. - sample[0] * sample[0] - sample[1] * sample[1]);
-    const auto x = 2. * sample[0] * rhs;
-    const auto y = 2. * sample[1] * rhs;
-    const auto z = 1. - 2. * (sample[0] * sample[0] + sample[1] * sample[1]);
+    auto ImplUniform = []() {
+        double x_1, x_2;
 
-    return {{x, y, z}};
+        do {
+            x_1 = RandomDouble() * 2. - 1.;
+            x_2 = RandomDouble() * 2. - 1.;
+        } while (x_1 * x_1 + x_2 * x_2 >= 1);
+
+        const auto rhs = std::sqrt(1. - x_1 * x_1 - x_2 * x_2);
+        const auto x = 2. * x_1 * rhs;
+        const auto y = 2. * x_2 * rhs;
+        const auto z = 1. - 2. * (x_1 * x_1 + x_2 * x_2);
+
+        return Math::Vector<double, 3>{{x, y, z}};
+    };
+
+    return ImplUniform();
 }
 
 }
