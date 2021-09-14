@@ -16,7 +16,7 @@ ContinuousRenderer::ContinuousRenderer(std::shared_ptr<Scene> scene, unsigned in
     intermediates.image.create(width, height);
 
     contRenderIntegrator.SetScene(scene);
-    contRenderIntegrator.Setup({{width, height}});
+    contRenderIntegrator.SetSize(width, height);
 
     window.setActive(false);
     rendererThread = std::thread([this] {
@@ -35,7 +35,7 @@ ContinuousRenderer::ContinuousRenderer(std::shared_ptr<Scene> scene, unsigned in
         auto ConverterWorkerFn = [this, filter](ConverterWorkItem item) {
             for (size_t y = item.startRow; y < item.endRow; y++) {
                 for (size_t x = 0; x < item.image.Width(); x++) {
-                    auto col = filter(item.image.At({{x, y}})) * 255;
+                    auto col = filter(item.image.At(x, y)) * 255;
                     intermediates.image.setPixel(
                       x, y,
                       sf::Color{
@@ -49,14 +49,10 @@ ContinuousRenderer::ContinuousRenderer(std::shared_ptr<Scene> scene, unsigned in
             }
         };
 
-        WorkerPoolWG<decltype(ConverterWorkerFn), ConverterWorkItem> converterWorker(std::move(ConverterWorkerFn), 64);
+        Utils::WorkerPoolWG<decltype(ConverterWorkerFn), ConverterWorkItem> converterWorker(std::move(ConverterWorkerFn), 64);
 
         std::thread converterWorkerThread{[&converterWorker] {
-#ifdef LIBGFX_SWRP_SINGLE_THREAD
-            converterWorker.Work(1);
-#else
-            converterWorker.Work(8);
-#endif
+            converterWorker.Work(preferredThreadCount);
         }};
 
         auto ImageRender = [&] {
@@ -93,10 +89,10 @@ ContinuousRenderer::ContinuousRenderer(std::shared_ptr<Scene> scene, unsigned in
 
             ImGui::SFML::Update(window, dt);
             if (cameraParticle.TickSFML(window, dt.asSeconds(), 50.)) {
-                contRenderIntegrator.SetRenderOptions({
-                                              .position{cameraParticle.position},
-                                              .rotation{cameraParticle.Rotation()},
-                                            });
+                contRenderIntegrator.SetCameraOptions({
+                                                        .position{cameraParticle.position},
+                                                        .rotation{cameraParticle.Rotation()},
+                                                      });
             }
 
             window.clear();
@@ -126,6 +122,7 @@ ContinuousRenderer::ContinuousRenderer(std::shared_ptr<Scene> scene, unsigned in
 ContinuousRenderer::~ContinuousRenderer() {
     Quit();
     Join();
+    ImGui::SFML::Shutdown();
 }
 
 void ContinuousRenderer::Join() {

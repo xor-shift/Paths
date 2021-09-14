@@ -9,63 +9,68 @@
 #include <gfx/image.hpp>
 #include <gfx/scene/scene.hpp>
 #include <maths/matvec.hpp>
-#include <gfx/sampler/sampler.hpp>
+#include <maths/rand.hpp>
+#include <gfx/sampler/samplers.hpp>
 #include <utils/workerPool.hpp>
 
 namespace Gfx {
 
-template<Concepts::Sampler T, bool takeAverage>
-class SamplerWrapperIntegrator {
-    void StartThreads() {
-#ifdef LIBGFX_SWRP_SINGLE_THREAD
-        const auto conc = 1;
-#else
-        const auto conc = std::thread::hardware_concurrency() * 3 / 4;
-#endif
+namespace Impl {
 
-        rendererWorkerThread = std::thread([this, conc] { rendererWorkerPool.Work(conc); });
-        btfWorkerThread = std::thread([this, conc] { btfWorkerPool.Work(conc); });
-    }
+enum class FilterType {
+    Box,
+    Gaussian,
+};
 
+struct SWRPConfig {
+    bool singleThreaded;
+    bool averageFrames;
+
+    FilterType filterType;
+    std::array<size_t, 4> gaussianParams{0, 1, 3, 5};
+};
+
+template<Concepts::Sampler T, SWRPConfig configuration>
+class SamplerWrapper : public Integrator {
   public:
     typedef T sampler_type;
 
-    explicit SamplerWrapperIntegrator(sampler_type &&sampler) requires std::is_move_constructible_v<sampler_type>
+    explicit SamplerWrapper(sampler_type &&sampler) requires std::is_move_constructible_v<sampler_type>
       : sampler(std::move(sampler)) { StartThreads(); }
 
-    SamplerWrapperIntegrator() requires std::is_default_constructible_v<sampler_type>
+    SamplerWrapper() requires std::is_default_constructible_v<sampler_type>
       : sampler({}) { StartThreads(); }
 
-    ~SamplerWrapperIntegrator() {
+    ~SamplerWrapper() {
         rendererWorkerPool.Close();
-        if (rendererWorkerThread.joinable())
-            rendererWorkerThread.join();
+        if (rendererThread.joinable())
+            rendererThread.join();
 
         btfWorkerPool.Close();
-        if (btfWorkerThread.joinable())
-            btfWorkerThread.join();
+        if (bufferCopyThread.joinable())
+            bufferCopyThread.join();
     }
 
-    void Setup(Math::Vector<size_t, 2> dimensions) {
-        frontBuffer = Gfx::Image(dimensions);
-        backBuffer = Gfx::Image(dimensions);
+    void SetSize(size_t width, size_t height) override {
+        frontBuffer = Gfx::Image(width, height);
+        backBuffer = Gfx::Image(width, height);
     }
 
-    void SetScene(std::shared_ptr<Scene> newScene) {
+    void SetScene(std::shared_ptr<Scene> newScene) override {
         scene = std::move(newScene);
     }
 
-    void SetRenderOptions(RenderOptions opts) {
-        ResetBackBuffer();
+    void SetCameraOptions(CameraOptions opts) override {
+        ResetBuffers();
         renderOptions = opts;
     }
 
-    Gfx::Image GetRender() {
+    [[nodiscard]] const Gfx::Image &GetRender() override {
         auto workProducer = [this](size_t start, size_t end) {
-            return RendererWorkItem{
-              .sampler = *this,
-              .startRow = start,
-              .endRow = end,
+            return WorkItem{
+              .self = *this,
+              .start = start,
+              .end = end,
             };
         };
 
@@ -83,63 +88,97 @@ class SamplerWrapperIntegrator {
   private:
     sampler_type sampler;
 
-    RenderOptions renderOptions{};
     std::shared_ptr<Scene> scene{nullptr};
+    CameraOptions renderOptions;
 
     Gfx::Image frontBuffer{};
     Gfx::Image backBuffer{};
     Real framesRendered = 0;
 
-    void ResetBackBuffer() {
-        framesRendered = 0.;
-        backBuffer = Gfx::Image(frontBuffer.dimensions);
-    }
-
-    struct RendererWorkItem {
-        SamplerWrapperIntegrator<sampler_type, takeAverage> &sampler;
-        size_t startRow, endRow;
+    struct WorkItem {
+        SamplerWrapper<T, configuration> &self;
+        size_t start, end;
     };
 
-    static void BackToFrontWorker(RendererWorkItem &&item) noexcept {
-        for (size_t row = item.startRow; row != item.endRow; row++) {
-            for (size_t col = 0; col < item.sampler.backBuffer.Width(); col++) {
-                if constexpr (!takeAverage) {
-                    item.sampler.frontBuffer.At({{col, row}}) = item.sampler.backBuffer.At({{col, row}});
-                    item.sampler.backBuffer.At({{col, row}}) = {{0}};
+    static void BufferCopyWorker(WorkItem &&item) noexcept {
+        for (size_t row = item.start; row != item.end; row++) {
+            for (size_t col = 0; col < item.self.backBuffer.Width(); col++) {
+                if constexpr (configuration.averageFrames) {
+                    item.self.frontBuffer.At(col, row) = item.self.backBuffer.At(col, row) / item.self.framesRendered;
                 } else {
-                    item.sampler.frontBuffer.At({{col, row}}) = item.sampler.backBuffer.At({{col, row}}) / item.sampler.framesRendered;
+                    item.self.frontBuffer.At(col, row) = item.self.backBuffer.At(col, row);
+                    item.self.backBuffer.At(col, row) = {{0}};
                 }
             }
         }
     }
 
-    static void RendererWorker(RendererWorkItem &&item) noexcept {
-        const auto &renderOptions = item.sampler.renderOptions;
-        const auto &sampler = item.sampler.sampler;
-        const auto &scene = item.sampler.scene;
-        auto &backBuffer = item.sampler.backBuffer;
+    static std::pair<Real, Real> GetPixXY(size_t width, size_t height, size_t x, size_t y) {
+        const Real pixX = static_cast<Real>(x) - static_cast<Real>(width) / 2.;
+        const Real pixY = static_cast<Real>(height - y) - static_cast<Real>(height) / 2.;
+
+        if constexpr (configuration.filterType == FilterType::Box) {
+            return {pixX, pixY};
+        } else if constexpr (configuration.filterType == FilterType::Gaussian) {
+            const auto samples = Math::SampleNormalMPCE<
+              configuration.gaussianParams[0],
+              configuration.gaussianParams[1],
+              configuration.gaussianParams[2],
+              configuration.gaussianParams[3]>();
+            return {pixX + samples[0], pixY + samples[1]};
+        }
+
+    }
+
+    static void RendererWorker(WorkItem &&item) noexcept {
+        const auto &renderOptions = item.self.renderOptions;
+        const auto &sampler = item.self.sampler;
+        const auto &scene = item.self.scene;
+        auto &backBuffer = item.self.backBuffer;
 
         const Real d = (static_cast<Real>(backBuffer.Width()) / 2) / std::tan(renderOptions.fovWidth / 2.);
 
-        for (size_t row = item.startRow; row != item.endRow; row++) {
+        for (size_t row = item.start; row != item.end; row++) {
             for (std::size_t x = 0; x < backBuffer.Width(); x++) {
-                const Real rayX = static_cast<Real>(x)
-                                  - static_cast<Real>(backBuffer.Width()) / 2.;
+                const auto xy = GetPixXY(item.self.frontBuffer.Width(), item.self.frontBuffer.Height(), x, row);
 
-                const Real rayY = static_cast<Real>(backBuffer.Height() - row)
-                                  - static_cast<Real>(backBuffer.Height()) / 2.;
+                const Ray ray(renderOptions.position, renderOptions.rotation * Math::Normalized(Point{{xy.first, xy.second, d}}));
 
-                const Ray ray(renderOptions.position, renderOptions.rotation * Math::Normalized(Point{{rayX, rayY, d}}));
-
-                backBuffer.At({{x, row}}) += sampler.Sample(*scene, ray);
+                backBuffer.At(x, row) += sampler.Sample(*scene, ray);
             }
         }
     }
 
-    WorkerPoolWG<decltype(&SamplerWrapperIntegrator<sampler_type, takeAverage>::RendererWorker), RendererWorkItem> rendererWorkerPool{&RendererWorker, 16};
-    std::thread rendererWorkerThread;
-    WorkerPoolWG<decltype(&SamplerWrapperIntegrator<sampler_type, takeAverage>::BackToFrontWorker), RendererWorkItem> btfWorkerPool{&BackToFrontWorker, 16};
-    std::thread btfWorkerThread;
+    std::thread bufferCopyThread;
+    Utils::WorkerPoolWG<decltype(&SamplerWrapper<sampler_type, configuration>::BufferCopyWorker), WorkItem> btfWorkerPool{&BufferCopyWorker, 16};
+    std::thread rendererThread;
+    Utils::WorkerPoolWG<decltype(&SamplerWrapper<sampler_type, configuration>::RendererWorker), WorkItem> rendererWorkerPool{&RendererWorker, 16};
+
+    void StartThreads() {
+        rendererThread = std::thread([this] { rendererWorkerPool.Work(preferredThreadCount); });
+        bufferCopyThread = std::thread([this] { btfWorkerPool.Work(preferredThreadCount); });
+    }
+
+    void ResetBuffers() {
+        if constexpr (configuration.averageFrames) {
+            framesRendered = 0.;
+            backBuffer.Fill({{0, 0, 0}});
+        }
+    }
 };
+
+}
+
+typedef Impl::SamplerWrapper<Sampler::Whitted, Impl::SWRPConfig{
+  .singleThreaded = false,
+  .averageFrames = false,
+  .filterType = Impl::FilterType::Box,
+}> WhittedIntegrator;
+
+typedef Impl::SamplerWrapper<Sampler::PT, Impl::SWRPConfig{
+  .singleThreaded = false,
+  .averageFrames = true,
+  .filterType = Impl::FilterType::Gaussian,
+}> MonteCarloIntegrator;
 
 }

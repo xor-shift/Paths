@@ -28,8 +28,7 @@ class ContinuousRenderer {
     sf::RenderWindow window;
     std::thread rendererThread{};
 
-    SamplerWrapperIntegrator<Sampler::PT, true> contRenderIntegrator{};
-    std::unique_ptr<SamplerWrapperIntegrator<Sampler::PT, false>> fullRenderIntegrator{nullptr};
+    MonteCarloIntegrator contRenderIntegrator{};
     std::shared_ptr<Scene> scene;
 
     struct {

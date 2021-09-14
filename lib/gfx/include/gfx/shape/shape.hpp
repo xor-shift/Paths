@@ -17,7 +17,7 @@ struct IntersectionOptions {
 
 template<typename T>
 concept Shape = requires(const T &s, const Ray &ray) {
-    { s.matIndex } -> std::convertible_to<std::size_t>;
+    //{ s.matIndex } -> std::convertible_to<std::size_t>;
     { s.Intersect(ray) } -> std::convertible_to<std::optional<Intersection>>;
 } && requires(T &s) {
     true;

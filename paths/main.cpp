@@ -3,28 +3,23 @@
 #include <imgui-SFML.h>
 
 #include <gfx/camera/camera.hpp>
+#include <gfx/camera/ui.hpp>
 #include <gfx/scene/scene.hpp>
-#include <gfx/image.hpp>
 #include <gfx/ray.hpp>
-
 #include <gfx/stl/binary.hpp>
 
+#include <X11/Xlib.h>
+
 int main() {
+    XInitThreads();
+
     auto scenePtr = std::make_shared<Gfx::Scene>();
 
     auto &scene = *scenePtr;
 
     scene
       << Gfx::Material{
-        .albedo = Gfx::Material::AlbedoDirect{.albedo{{1, .25, .25}}}
-      }
-      << Gfx::Material{
-        .albedo = Gfx::Material::AlbedoUVFunc{
-          .uvFunc = [](const Math::Vector<Gfx::Real, 2> &uv) -> Gfx::RGBSpectrum {
-              const auto &[u, v] = uv.implData();
-              return {{u, v, Gfx::Real(1) - u - v}};
-          }
-        }
+        .albedo = Gfx::Material::AlbedoDirect{.albedo{{1, 1, 1}}}
       }
       << Gfx::Material{
         .albedo = Gfx::Material::AlbedoDirect{.albedo{{1, 0, 0}}},
@@ -37,34 +32,28 @@ int main() {
       << Gfx::Material{
         .albedo = Gfx::Material::AlbedoDirect{.albedo{{0, 0, 1}}},
         .emittance{{5, 5, 25}},
-      }
-      << Gfx::Material{
-        .albedo = Gfx::Material::AlbedoDirect{.albedo{{1, 1, 1}}}
       };
 
     scene
-      << Gfx::Shape::Plane({{0, -1, 0}}, {{0, 1, 0}}, 0);
+      << Gfx::Shape::Plane(0, {{0, -1, 0}}, {{0, 1, 0}});
 
     Gfx::BVHBuilder builder;
-
-    builder
-      << Gfx::Shape::Sphere({{0, 0, -1.5}}, 1., 1)
-      << Gfx::Shape::Disc(2, {{-3, 5, 5}}, Math::Normalized(Gfx::Point{{1, -1, 0}}), 1.)
-      << Gfx::Shape::Disc(3, {{0, 6, 5}}, {{0, -1, 0}}, 1.)
-      << Gfx::Shape::Disc(4, {{3, 5, 5}}, Math::Normalized(Gfx::Point{{-1, -1, 0}}), 1.);
 
     auto rot = Math::Matrix<Gfx::Real, 3, 3>::Rotation(0, -M_PI_2, 0);
     rot = rot * Math::Identity<Gfx::Real, 3>() * .25;
 
-    Gfx::STL::InsertIntoGeneric(builder, Gfx::STL::Binary::ReadFile("teapot.stl"), 5, {{0, 0, 5}}, rot);
-    auto builtBVH = builder.Build();
+    Gfx::STL::InsertIntoGeneric(builder, Gfx::STL::Binary::ReadFile("teapot.stl"), 0, {{0, 0, 5}}, rot);
 
-    scene.InsertBBVH(std::move(builtBVH));
+    scene.InsertBBVH(builder.Build());
 
-    Gfx::ContinuousRenderer renderer(scenePtr, 960, 540, "asdasd");
-    renderer.Join();
+    builder
+      << Gfx::Shape::Disc(1, {{-3, 5, 5}}, Math::Normalized(Gfx::Point{{1, -1, 0}}), 1.)
+      << Gfx::Shape::Disc(2, {{0, 6, 5}}, {{0, -1, 0}}, 1.)
+      << Gfx::Shape::Disc(3, {{3, 5, 5}}, Math::Normalized(Gfx::Point{{-1, -1, 0}}), 1.);
+    scene.InsertBBVH(builder.Build());
 
-    ImGui::SFML::Shutdown();
+    Gfx::UI ui(scenePtr, 1280, 720);
+    ui.Join();
 
     return 0;
 }

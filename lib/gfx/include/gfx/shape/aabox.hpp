@@ -40,7 +40,7 @@ struct AABox {
     }
 
   public:
-    constexpr AABox(Point min, Point max, size_t matIndex) noexcept
+    constexpr AABox(size_t matIndex, Point min, Point max) noexcept
       : extents(min, max)
         , center((min + max) / 2.)
         , matIndex(matIndex) {}
@@ -50,11 +50,6 @@ struct AABox {
     template<bool getDistance = false>
     [[nodiscard]] constexpr auto Intersects(const Ray &ray) const noexcept { return IntersectsImpl<getDistance>(extents, ray); }
 
-    /**
-     * Does not calculate UV coordinates
-     * @param ray
-     * @return
-     */
     [[nodiscard]] constexpr std::optional<Intersection> Intersect(const Ray &ray) const noexcept {
         if (const auto &[isect, dist] = Intersects<true>(ray); isect) {
             auto isection = Intersection(ray, matIndex, dist);
@@ -73,11 +68,10 @@ struct AABox {
         } else return std::nullopt;
     }
 
-    //satisfy Boundable
     const std::pair<Point, Point> extents;
     const Point center;
 
-    //satisfy Shape
+  private:
     const std::size_t matIndex;
 };
 

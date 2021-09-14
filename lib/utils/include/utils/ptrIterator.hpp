@@ -2,6 +2,8 @@
 
 #include <type_traits>
 
+namespace Utils {
+
 template<typename T, size_t N>
 struct PtrIterator {
     explicit PtrIterator(T *ptr, ptrdiff_t i = 0)
@@ -52,3 +54,5 @@ struct PtrIterator {
     T *ptr;
     ptrdiff_t i;
 };
+
+}

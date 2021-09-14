@@ -29,18 +29,23 @@ enum class TriangleCenterType {
  * @tparam parallelogram
  */
 template<bool parallelogram>
-struct TriangleImpl {
-    constexpr explicit TriangleImpl(std::size_t matIndex, std::array<Point, 3> vertices)
+class TriangleImpl {
+  private:
+    const std::array<Point, 3> vertices;
+    const std::array<Point, 2> edges;
+
+  public:
+    constexpr explicit TriangleImpl(size_t matIndex, std::array<Point, 3> vertices)
       : vertices(vertices)
         , edges({vertices[1] - vertices[0], vertices[2] - vertices[0]})
-        , normal(Math::Normalized(Math::Cross(edges[0], edges[1])))
         , extents(parallelogram
                   ? std::pair<Point, Point>{Math::Min(Math::Min(vertices[0], vertices[1]), vertices[2]),
                                             vertices[0] + (edges[0] + edges[1])}
                   : std::pair<Point, Point>{Math::Min(Math::Min(vertices[0], vertices[1]), vertices[2]),
                                             Math::Max(Math::Max(vertices[0], vertices[1]), vertices[2])})
         , center(parallelogram ? (extents.first + extents.second) / 2. : PVecCalcCenter(vertices))
-        , matIndex(matIndex) {}
+        , matIndex(matIndex)
+        , normal(Math::Normalized(Math::Cross(edges[0], edges[1]))) {}
 
     [[nodiscard]] constexpr std::optional<Intersection> Intersect(const Ray &ray) const noexcept {
         LIBGFX_NORMAL_CHECK(ray.direction);
@@ -67,19 +72,15 @@ struct TriangleImpl {
         return Intersection(ray, matIndex, t, normal, {{u, v}});
     }
 
-    //regular data
-    const std::array<Point, 3> vertices;
-    const std::array<Point, 2> edges;
-    const Point normal;
-
-    //satisfy boundable
     const std::pair<Point, Point> extents;
     const Point center;
 
-    //satisfy Shape
+  private:
     const std::size_t matIndex;
 
-  private:
+    const Point normal;
+
+
     [[nodiscard]] static constexpr std::array<Real, 3> PVecKCalc(const std::array<Point, 3> &vertices) noexcept {
         return {
           Math::Magnitude(vertices[1] - vertices[2]),

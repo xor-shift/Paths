@@ -4,12 +4,13 @@
 
 namespace Gfx::Shape {
 
-struct Sphere {
-    constexpr Sphere(Point center, Real radius, size_t matIndex)
+class Sphere {
+  public:
+    constexpr Sphere(size_t matIndex, Point center, Real radius)
       : center(center)
-        , radius(radius)
         , extents(center - Point{{radius, radius, radius}},
                   center + Point{{radius, radius, radius}})
+        , radius(radius)
         , matIndex(matIndex) {}
 
     [[nodiscard]] constexpr std::optional<Intersection> Intersect(const Ray &ray) const noexcept {
@@ -43,10 +44,10 @@ struct Sphere {
     }
 
     const Point center;
-    const Real radius;
-
     const std::pair<Point, Point> extents;
 
+  private:
+    const Real radius;
     const size_t matIndex;
 };
 

@@ -33,7 +33,7 @@ struct InvLERP {
         , k(-a * r) {}
 
     RGBSpectrum operator()(RGBSpectrum s) const noexcept {
-        for (auto &v : s) v = v * r + k;
+        for (auto &v: s) v = v * r + k;
         return s;
     }
 
@@ -48,9 +48,27 @@ struct Clamp {
     const Real min, max;
 
     RGBSpectrum operator()(RGBSpectrum s) const noexcept {
-        for (auto &v : s) v = std::clamp(v, min, max);
+        for (auto &v: s) v = std::clamp(v, min, max);
         return s;
     }
+};
+
+template<typename Op>
+struct Oper {
+    Oper() requires(std::is_nothrow_default_constructible_v<Op>)
+      : op({}) {}
+
+    explicit Oper(const Op &op) requires(std::is_nothrow_copy_constructible_v<Op>)
+      : op(op) {}
+
+
+    RGBSpectrum operator()(RGBSpectrum s) const noexcept {
+        for (auto &v: s) v = std::invoke(op, v);
+        return s;
+    }
+
+  private:
+    const Op op;
 };
 
 template<Concepts::BasicFilterUnary... Ts>

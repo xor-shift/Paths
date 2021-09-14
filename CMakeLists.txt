@@ -1,15 +1,17 @@
 cmake_minimum_required(VERSION 3.21)
 project(Paths)
 
+set(CMAKE_CXX_STANDARD 23)
+
 set(CONAN_COMPILER clang)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
-find_package(SFML 2.5 REQUIRED COMPONENTS graphics window network audio system)
+find_package(SFML 2.5 REQUIRED COMPONENTS graphics window system)
 find_package(ImGui-SFML REQUIRED)
 find_package(OpenMP REQUIRED)
 
-set(CMAKE_CXX_STANDARD 23)
+#set(PATHS_USE_POLLY)
 
 add_subdirectory(lib)
 
@@ -57,6 +59,10 @@ target_link_libraries(${PROJECT_NAME}_distrib_tests
         fmt
         paths_maths)
 
+if (DEFINED PATHS_USE_POLLY)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mllvm -polly")
+endif ()
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -mtune=native")
 if ((CMAKE_BUILD_TYPE MATCHES Debug) OR (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo))
@@ -67,4 +73,8 @@ if ((CMAKE_BUILD_TYPE MATCHES Debug) OR (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo
             -g -fno-omit-frame-pointer)
 
     target_link_options(Paths PRIVATE)
+endif ()
+
+if (UNIX)
+    set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -lX11")
 endif ()

@@ -97,13 +97,13 @@ struct Vector : public Impl::VectorExpr<T, Vector<T, N>> {
 
     array_type impl;
 
-    [[nodiscard]] auto begin() noexcept { return PtrIterator<T, N>(data()); }
+    [[nodiscard]] auto begin() noexcept { return Utils::PtrIterator<T, N>(data()); }
 
-    [[nodiscard]] auto end() noexcept { return PtrIterator<T, N>(data(), N); }
+    [[nodiscard]] auto end() noexcept { return Utils::PtrIterator<T, N>(data(), N); }
 
-    [[nodiscard]] auto cbegin() const noexcept { return PtrIterator<const T, N>(data()); }
+    [[nodiscard]] auto cbegin() const noexcept { return Utils::PtrIterator<const T, N>(data()); }
 
-    [[nodiscard]] auto cend() const noexcept { return PtrIterator<const T, N>(data(), N); }
+    [[nodiscard]] auto cend() const noexcept { return Utils::PtrIterator<const T, N>(data(), N); }
 
     constexpr Vector() noexcept
       : impl({}) {}

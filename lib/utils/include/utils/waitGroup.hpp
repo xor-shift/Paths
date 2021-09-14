@@ -4,6 +4,8 @@
 #include <condition_variable>
 #include <mutex>
 
+namespace Utils {
+
 class WaitGroup {
   public:
     void Add(size_t delta) {
@@ -27,3 +29,5 @@ class WaitGroup {
     std::condition_variable wgCV{};
     std::atomic_size_t n{0};
 };
+
+}

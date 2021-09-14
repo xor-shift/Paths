@@ -13,17 +13,11 @@ namespace Gfx::Shape {
 class Disc;
 
 class Plane {
-    friend class Disc;
-
-    const Point center{};
-    const Point normal{};
-
   public:
-
-    constexpr Plane(Point center, Point normal, size_t matIndex)
-      : center(center)
-        , normal(normal)
-        , matIndex(matIndex) {}
+    constexpr Plane(size_t matIndex, Point center, Point normal)
+      : matIndex(matIndex)
+        , center(center)
+        , normal(normal) {}
 
     [[nodiscard]] constexpr std::optional<Intersection> Intersect(const Ray &ray) const noexcept {
         LIBGFX_NORMAL_CHECK(ray.direction);
@@ -46,7 +40,13 @@ class Plane {
         return Math::Dot(center - ray.origin, normal) / denom;
     }
 
-    const std::size_t matIndex{0};
+
+  private:
+    friend class Disc;
+
+    const size_t matIndex{0};
+    const Point center{};
+    const Point normal{};
 };
 
 }

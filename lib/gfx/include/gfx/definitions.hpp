@@ -1,5 +1,7 @@
 #pragma once
 
+#include <thread>
+
 #include "maths/maths.hpp"
 
 #define LIBGFX_ENABLE_NORMAL_CHECKS
@@ -20,6 +22,11 @@ static constexpr Real sensibleEps = static_cast<Real>(0.000001);
 typedef Math::Vector<Real, 3> Point;
 static constexpr Point EpsilonVector({sensibleEps, sensibleEps, sensibleEps});
 
+#ifdef LIBGFX_SWRP_SINGLE_THREAD
+static const size_t preferredThreadCount = 1;
+#else
+static const size_t preferredThreadCount = std::thread::hardware_concurrency();
+#endif
 }
 
 #ifdef LIBGFX_ENABLE_NORMAL_CHECKS

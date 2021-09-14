@@ -41,7 +41,6 @@ struct TreeNode {
           (childNodes[1]->extents.first + childNodes[1]->extents.second) / 2.,
         };
 
-        size_t offset = 0;
         bool swap = false;
 
         if constexpr (direction == 0) swap = centers[0][0] >= centers[1][0];

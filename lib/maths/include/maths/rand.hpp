@@ -110,6 +110,31 @@ inline Math::Vector<double, 2> SampleNormalMP(double mu = 0, double sigma = 1) n
     return {{mu + sigma * x * s, mu + sigma * y * s}};
 }
 
+/**
+ * Equivalent to SampleNormalMP(muN/muD, sigmaN/sigmaD) where all template params are cast to doubles
+ * @tparam muN numerator for mu
+ * @tparam muD denominator for mu
+ * @tparam sigmaN numerator for sigma
+ * @tparam sigmaD denominator for sigma
+ * @return
+ */
+template<long muN, long muD, long sigmaN, long sigmaD>
+inline Math::Vector<double, 2> SampleNormalMPCE() noexcept {
+    constexpr double mu = static_cast<double>(muN) / static_cast<double>(muD);
+    constexpr double sigma = static_cast<double>(sigmaN) / static_cast<double>(sigmaD);
+
+    double x, y, s;
+
+    do {
+        x = RandomDoubleEps() * 2. - 1.;
+        y = RandomDoubleEps() * 2. - 1.;
+        s = x * x + y * y;
+    } while (s >= 1. || s == 0.);
+
+    s = std::sqrt(-2. * log(s) / s);
+    return {{mu + sigma * x * s, mu + sigma * y * s}};
+}
+
 inline Math::Vector<double, 2> SampleSNDNormalMP() noexcept { return SampleNormalMP(); }
 
 inline Math::Vector<double, 3> D3RandomUnitVector() {

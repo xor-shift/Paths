@@ -9,6 +9,8 @@
 #include "bufChan.hpp"
 #include "waitGroup.hpp"
 
+namespace Utils {
+
 /**
  * A WaitGroup based worker pool
  * @tparam Fn The callback to call for working
@@ -48,11 +50,11 @@ class WorkerPoolWG {
         } else {
             std::vector<std::thread> workerThreads(nThreads);
 
-            for (auto &thread : workerThreads) {
+            for (auto &thread: workerThreads) {
                 thread = std::thread(lambda);
             }
 
-            for (auto &thread : workerThreads) {
+            for (auto &thread: workerThreads) {
                 if (thread.joinable())
                     thread.join();
             }
@@ -86,3 +88,5 @@ class WorkerPoolWG {
     BufChan<ChanType> workItemChan;
     WaitGroup wg{};
 };
+
+}
