@@ -41,7 +41,7 @@ class SamplerWrapper : public Integrator {
     SamplerWrapper() requires std::is_default_constructible_v<sampler_type>
       : sampler({}) { StartThreads(); }
 
-    ~SamplerWrapper() {
+    ~SamplerWrapper() override {
         rendererWorkerPool.Close();
         if (rendererThread.joinable())
             rendererThread.join();
@@ -65,7 +65,16 @@ class SamplerWrapper : public Integrator {
         renderOptions = opts;
     }
 
-    [[nodiscard]] const Gfx::Image &GetRender() override {
+    void SetBackbuffer(Image &&image, size_t nSamples) override {
+        backBuffer = image;
+        framesRendered = static_cast<Real>(nSamples);
+    }
+
+    [[nodiscard]] std::pair<const Image &, size_t> GetBackbuffer() const override {
+        return std::make_pair(std::cref(backBuffer), static_cast<size_t>(framesRendered));
+    }
+
+    void DoRender() override {
         auto workProducer = [this](size_t start, size_t end) {
             return WorkItem{
               .self = *this,
@@ -78,6 +87,16 @@ class SamplerWrapper : public Integrator {
         rendererWorkerPool.WGWait();
 
         framesRendered += 1.;
+    }
+
+    [[nodiscard]] const Gfx::Image &GetRender() override {
+        auto workProducer = [this](size_t start, size_t end) {
+            return WorkItem{
+              .self = *this,
+              .start = start,
+              .end = end,
+            };
+        };
 
         btfWorkerPool.SplitWork(backBuffer.Height(), 8, workProducer);
         btfWorkerPool.WGWait();

@@ -21,62 +21,6 @@ struct ThreadedBVHNode {
     const bounds_type bounds;
 };
 
-struct TreeNode {
-    TreeNode(size_t depth, size_t maxDepth, size_t maxObjects, bounds_type extents = {
-      {{-sensibleInf, -sensibleInf, -sensibleInf}},
-      {{sensibleInf,  sensibleInf,  sensibleInf}}
-    })
-      : extents(std::move(extents)), depth(depth), maxDepth(maxDepth), maxObjects(maxObjects) {}
-
-    void Fit(const std::vector<Shape::BoundableShape> &store);
-
-    void Split(const std::vector<Shape::BoundableShape> &store);
-
-    template<size_t direction>
-    void Order() {
-        if (childNodes[0] == nullptr) return;
-
-        std::array<Point, 2> centers = {
-          (childNodes[0]->extents.first + childNodes[0]->extents.second) / 2.,
-          (childNodes[1]->extents.first + childNodes[1]->extents.second) / 2.,
-        };
-
-        bool swap = false;
-
-        if constexpr (direction == 0) swap = centers[0][0] >= centers[1][0];
-        else if constexpr (direction == 1) swap = centers[0][0] <= centers[1][0];
-        else if constexpr (direction == 2) swap = centers[0][1] >= centers[1][1];
-        else if constexpr (direction == 3) swap = centers[0][1] <= centers[1][1];
-        else if constexpr (direction == 4) swap = centers[0][2] >= centers[1][2];
-        else if constexpr (direction == 5) swap = centers[0][2] <= centers[1][2];
-        else static_assert(direction != direction);
-
-        if (swap) std::swap(childNodes[0], childNodes[1]);
-
-        for (auto &child : childNodes) child->Order<direction>();
-    }
-
-    [[nodiscard]] bool Leaf() { return childNodes[0] == nullptr; }
-
-    void BuildLinks(TreeNode *right = nullptr);
-
-    //regular tree stuff
-    bounds_type extents;
-    std::vector<size_t> shapeIndices{};
-
-    std::array<std::unique_ptr<TreeNode>, 2> childNodes{nullptr, nullptr};
-
-    //thread specific stuff
-    size_t selfID = 0;
-    //+x, -x, +y, -y, +z, -z
-    std::array<TreeNode *, 2> links;
-
-    //const stuff
-    const size_t depth;
-    const size_t maxDepth;
-    const size_t maxObjects;
-};
-
 }
 
 class BuiltBVH {
@@ -94,7 +38,7 @@ class BuiltBVH {
 
 class BVHBuilder {
   public:
-    BVHBuilder(size_t maxObjectsPerNode = 2, size_t maxDepth = 31)
+    explicit BVHBuilder(size_t maxObjectsPerNode = 2, size_t maxDepth = 31)
       : maxObjectsPerNode(maxObjectsPerNode)
         , maxDepth(maxDepth) {}
 

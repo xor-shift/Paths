@@ -2,6 +2,7 @@
 
 #include <concepts>
 
+#include <gfx/image.hpp>
 #include <gfx/ray.hpp>
 #include <gfx/scene/scene.hpp>
 #include <gfx/spectrum.hpp>
@@ -29,7 +30,13 @@ class Integrator {
 
     virtual void SetCameraOptions(CameraOptions opts) = 0;
 
-    virtual const Image &GetRender() = 0;
+    virtual void SetBackbuffer(Image &&image, size_t nSamples) = 0;
+
+    [[nodiscard]] virtual std::pair<const Image &, size_t> GetBackbuffer() const = 0;
+
+    virtual void DoRender() = 0;
+
+    [[nodiscard]] virtual const Image &GetRender() = 0;
 };
 
 }

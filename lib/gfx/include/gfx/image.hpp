@@ -4,6 +4,15 @@
 
 namespace Gfx {
 
+namespace Concepts {
+
+template<typename T>
+concept Kernel = requires (const T &k, RGBSpectrum c, size_t x, size_t y) {
+    { std::invoke(k, c, x, y) } -> std::same_as<RGBSpectrum>;
+};
+
+}
+
 class Image {
   public:
     Image() = default;
@@ -25,6 +34,13 @@ class Image {
     [[nodiscard]] size_t Height() const noexcept { return height; }
 
     void Fill(RGBSpectrum color) { for (auto &c: data) c = color; }
+
+    [[nodiscard]] const std::vector<RGBSpectrum> &Data() const noexcept { return data; }
+
+    [[nodiscard]] std::vector<RGBSpectrum> &Data() noexcept { return data; }
+
+    template<Concepts::Kernel Kernel>
+    void ApplyKernel(const Kernel &kern) {}
 
   private:
     size_t width;

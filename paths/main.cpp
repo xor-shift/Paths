@@ -1,59 +1,80 @@
 #include <fmt/format.h>
-#include <SFML/Graphics.hpp>
-#include <imgui-SFML.h>
 
-#include <gfx/camera/camera.hpp>
-#include <gfx/camera/ui.hpp>
-#include <gfx/scene/scene.hpp>
-#include <gfx/ray.hpp>
-#include <gfx/stl/binary.hpp>
+#include <gfx/camera/filter.hpp>
 
-#include <X11/Xlib.h>
+#include "cameraSetup.hpp"
+#include "lodepng.h"
 
-int main() {
-    XInitThreads();
+void PrintHelp(const char *argv0) {
+    fmt::print(
+      "Usage:    ./{0} [camera setup file] <resume file>\n"
+      "Examples: ./{0} conf.json\n"
+      "          ./{0} conf.json resume.json", argv0);
+}
 
-    auto scenePtr = std::make_shared<Gfx::Scene>();
+template<Gfx::Concepts::BasicFilterUnary T>
+void Output(const std::string &filename, const Gfx::Image &image, const T &filter) {
+    //const size_t consoleWidth = 4 * 5;
+    //const size_t consoleHeight = 3 * 5;
 
-    auto &scene = *scenePtr;
+    std::vector<unsigned char> imageData(image.Width() * image.Height() * 4);
+    for (size_t y = 0; y < image.Height(); y++) {
+        for (size_t x = 0; x < image.Width(); x++) {
+            const auto color = filter(image.At(x, y));
 
-    scene
-      << Gfx::Material{
-        .albedo = Gfx::Material::AlbedoDirect{.albedo{{1, 1, 1}}}
-      }
-      << Gfx::Material{
-        .albedo = Gfx::Material::AlbedoDirect{.albedo{{1, 0, 0}}},
-        .emittance{{25, 5, 5}},
-      }
-      << Gfx::Material{
-        .albedo = Gfx::Material::AlbedoDirect{.albedo{{0, 1, 0}}},
-        .emittance{{5, 25, 5}},
-      }
-      << Gfx::Material{
-        .albedo = Gfx::Material::AlbedoDirect{.albedo{{0, 0, 1}}},
-        .emittance{{5, 5, 25}},
-      };
+            /*if (y % consoleWidth == 0 && x % consoleWidth == 0) {
+                if (Math::Magnitude(color) > 8) {
+                    fmt::print("#");
+                } else {
+                    fmt::print(".");
+                }
+            }*/
 
-    scene
-      << Gfx::Shape::Plane(0, {{0, -1, 0}}, {{0, 1, 0}});
+            const auto idx = (x + y * image.Width()) * 4;
+            imageData[idx + 0] = static_cast<uint8_t>(color[0]);
+            imageData[idx + 1] = static_cast<uint8_t>(color[1]);
+            imageData[idx + 2] = static_cast<uint8_t>(color[2]);
+            imageData[idx + 3] = 255;
+        }
+        //if (y % consoleWidth == 0) fmt::print("\n");
+    }
 
-    Gfx::BVHBuilder builder;
+    lodepng::encode(filename, imageData, image.Width(), image.Height(), LCT_RGBA, 8);
+}
 
-    auto rot = Math::Matrix<Gfx::Real, 3, 3>::Rotation(0, -M_PI_2, 0);
-    rot = rot * Math::Identity<Gfx::Real, 3>() * .25;
+int main(int argc, char *const *argv) {
+    PreparedCamera camera;
 
-    Gfx::STL::InsertIntoGeneric(builder, Gfx::STL::Binary::ReadFile("teapot.stl"), 0, {{0, 0, 5}}, rot);
+    if (argc < 2 || argc > 3) {
+        PrintHelp(argv[0]);
+        return 1;
+    } else {
+        camera = PrepareCameraFromJSON(argv[1]);
+    }
 
-    scene.InsertBBVH(builder.Build());
+    for (size_t i = 0; i < camera.outConfig.nSamples; i++) {
+        fmt::print("Rendering sample {} out of {}\n", i + 1, camera.outConfig.nSamples);
 
-    builder
-      << Gfx::Shape::Disc(1, {{-3, 5, 5}}, Math::Normalized(Gfx::Point{{1, -1, 0}}), 1.)
-      << Gfx::Shape::Disc(2, {{0, 6, 5}}, {{0, -1, 0}}, 1.)
-      << Gfx::Shape::Disc(3, {{3, 5, 5}}, Math::Normalized(Gfx::Point{{-1, -1, 0}}), 1.);
-    scene.InsertBBVH(builder.Build());
+        camera.integrator->DoRender();
 
-    Gfx::UI ui(scenePtr, 1280, 720);
-    ui.Join();
+        bool output = false;
+        output |= (camera.outConfig.outputEvery != 0) &&
+                  ((i + 1) % camera.outConfig.outputEvery == 0);
+        output |= i + 1 == camera.outConfig.nSamples;
+
+        if (output) {
+            const auto &image = camera.integrator->GetRender();
+            Output(camera.outConfig.outFileName, image, Gfx::Filters::Basic::ChainedUnaryFilter{
+              Gfx::Filters::Basic::InvLERP(0, 1),
+              Gfx::Filters::Basic::Clamp{0, 1},
+              Gfx::Filters::Basic::Oper([](Gfx::RGBSpectrum c) { return c * 255.; }),
+            });
+        }
+    }
+
+    auto [image, nSamples] = camera.integrator->GetBackbuffer();
+
+    SaveResume(camera.outConfig.resumeFileName, image, nSamples);
 
     return 0;
 }

@@ -22,8 +22,8 @@ template<Concepts::MatrixExpression ME, Concepts::VectorExpression VE> requires 
     }
 
   private:
-    const ME &me;
-    const VE &ve;
+    const ME me;
+    const VE ve;
 };
 
 }

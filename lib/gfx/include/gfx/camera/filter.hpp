@@ -63,7 +63,7 @@ struct Oper {
 
 
     RGBSpectrum operator()(RGBSpectrum s) const noexcept {
-        for (auto &v: s) v = std::invoke(op, v);
+        s = std::invoke(op, s);
         return s;
     }
 

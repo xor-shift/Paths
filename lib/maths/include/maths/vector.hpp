@@ -44,8 +44,8 @@ struct VecCrossProduct : public VectorExpr<typename E0::value_type, VecCrossProd
     }
 
   private:
-    const E0 &e0;
-    const E1 &e1;
+    const E0 e0;
+    const E1 e1;
 };
 
 template<Concepts::VectorExpression E0, Concepts::VectorExpression E1, typename Op> requires (E0::vectorSize == E1::vectorSize)
@@ -63,8 +63,8 @@ struct VecBinaryExpr : public VectorExpr<typename E0::value_type, VecBinaryExpr<
     constexpr auto operator[](size_t idx) const noexcept { return op(e0[idx], e1[idx]); }
 
   private:
-    const E0 &e0;
-    const E1 &e1;
+    const E0 e0;
+    const E1 e1;
     const Op op;
 };
 
@@ -83,7 +83,7 @@ struct VecUnaryExpr : public VectorExpr<typename E0::value_type, VecUnaryExpr<E0
     constexpr auto operator[](size_t idx) const noexcept { return op(e0[idx]); }
 
   private:
-    const E0 &e0;
+    const E0 e0;
     const Op op;
 };
 

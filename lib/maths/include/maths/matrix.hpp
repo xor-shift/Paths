@@ -45,8 +45,8 @@ struct MatrixBinaryExpr : public MatrixExpr<typename E0::value_type, MatrixBinar
     }
 
   private:
-    const E0 &e0;
-    const E1 &e1;
+    const E0 e0;
+    const E1 e1;
     const Op op;
 };
 
@@ -68,7 +68,7 @@ struct MatrixUnaryExpr : public MatrixExpr<typename E0::value_type, MatrixUnaryE
     }
 
   private:
-    const E0 &e0;
+    const E0 e0;
     const Op op;
 };
 
@@ -93,7 +93,7 @@ struct MatrixMultExpr : public MatrixExpr<typename E0::value_type, MatrixMultExp
     }
 
   private:
-    const E0 &e0;
+    const E0 e0;
     const E1 &e1;
 };
 
@@ -110,7 +110,7 @@ struct MatrixTransposeExpr {
     [[nodiscard]] constexpr value_type At(size_t i, size_t j) const noexcept { return e0.At(j, i); }
 
   private:
-    const E0 &e0;
+    const E0 e0;
 };
 
 }

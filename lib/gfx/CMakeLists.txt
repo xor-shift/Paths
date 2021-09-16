@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.21)
 project(paths_gfx)
 
 add_library(${PROJECT_NAME} SHARED
-        src/camera/body.cpp
-        src/camera/camera.cpp
         src/image.cpp
         src/scene/bvh.cpp
         src/scene/scene.cpp
