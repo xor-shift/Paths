@@ -1,0 +1,83 @@
+{
+  "integrator": {
+    "type": "mc basic",
+    "nSamples": 512,
+    "outputEvery": 16,
+    "outFile": {
+      "type": "png",
+      "file": "out.png"
+    },
+    "resumeFile": "resume.json"
+  },
+  "camera": {
+    "position": [0, 8, -2],
+    "look": [0, 45, 0],
+    "fov": 45,
+    "resolution": [1280, 720]
+  },
+  "scene": {
+    "materials": [
+      {
+        "albedo": [1, 1, 1]
+      },
+      {
+        "albedo": [1, 0, 0],
+        "emittance": [25, 5, 5]
+      },
+      {
+        "albedo": [0, 1, 0],
+        "emittance": [5, 25, 5]
+      },
+      {
+        "albedo": [0, 0, 1],
+        "emittance": [5, 5, 25]
+      }
+    ],
+    "bvh": [
+      [
+        {
+          "type": "stl_b",
+          "mat": 0,
+          "args": {
+            "file": "teapot.stl",
+            "offset": [0, 0, 5],
+            "transforms": [
+              {
+                "type": "rotation",
+                "rot": [0, -90, 0]
+              },
+              {
+                "type": "direct",
+                "data": [0.25, 0, 0, 0, 0.25, 0, 0, 0, 0.25]
+              }
+            ]
+          }
+        }
+      ],
+      [
+        {
+          "type": "disc",
+          "mat": 1,
+          "args": [[-3, 5, 5], [1, -1, 0], 1]
+        },
+        {
+          "type": "disc",
+          "mat": 2,
+          "args": [[0, 6, 5], [0, -1, 0], 1]
+        },
+        {
+          "type": "disc",
+          "mat": 3,
+          "args": [[3, 5, 5], [-1, -1, 0], 1]
+        }
+      ]
+    ],
+    "objects": [
+      {
+        "type": "plane",
+        "mat": 0,
+        "args": [[0, -1, 0], [0, 1, 0]]
+      }
+    ]
+  }
+}
