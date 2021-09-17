@@ -62,7 +62,8 @@ void OutputEXR(const std::string &filename, const Gfx::Image &image, OutConfig::
 
     exrHeader.num_channels = 3;
 
-    exrHeader.channels = static_cast<EXRChannelInfo *>(std::malloc(sizeof(EXRChannelInfo) * exrHeader.num_channels));
+    std::vector<EXRChannelInfo> headerChannels(exrHeader.num_channels);
+    exrHeader.channels = headerChannels.data();
     exrHeader.channels[0].name[0] = 'B';
     exrHeader.channels[1].name[0] = 'G';
     exrHeader.channels[2].name[0] = 'R';
@@ -70,8 +71,10 @@ void OutputEXR(const std::string &filename, const Gfx::Image &image, OutConfig::
     exrHeader.channels[1].name[1] = '\0';
     exrHeader.channels[2].name[1] = '\0';
 
-    exrHeader.pixel_types = static_cast<int *>(std::malloc(sizeof(int) * exrHeader.num_channels));
-    exrHeader.requested_pixel_types = static_cast<int *>(std::malloc(sizeof(int) * exrHeader.num_channels));
+    std::vector<int> headerPixelTypes(exrHeader.num_channels);
+    exrHeader.pixel_types = headerPixelTypes.data();
+    std::vector<int> headerRequestedPixelTypes(exrHeader.num_channels);
+    exrHeader.requested_pixel_types = headerRequestedPixelTypes.data();
 
     int requestedPixelType = 0;
     switch (type) {
@@ -98,10 +101,6 @@ void OutputEXR(const std::string &filename, const Gfx::Image &image, OutConfig::
         if (err) fmt::print("additional information: {}\n", err);
         else fmt::print("no additional information provided\n");
     }
-
-    std::free(exrHeader.channels);
-    std::free(exrHeader.pixel_types);
-    std::free(exrHeader.requested_pixel_types);
 }
 
 template<Gfx::Concepts::BasicFilterUnary T>
