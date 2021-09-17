@@ -9,7 +9,10 @@
 
 struct OutConfig {
     enum class FileType {
-        PNG
+        PNG,
+        EXR16F,
+        EXR32F,
+        EXR32I,
     };
 
     //sample the integrator nSamples times

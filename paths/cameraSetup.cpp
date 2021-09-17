@@ -229,6 +229,12 @@ struct Configuration {
 
         if (const auto &tStr = j.at("integrator").at("outFile").at("type").get_ref<const std::string &>(); tStr == "png")
             oConf.outFileType = OutConfig::FileType::PNG;
+        else if (tStr == "exr16f")
+            oConf.outFileType = OutConfig::FileType::EXR16F;
+        else if (tStr == "exr32f")
+            oConf.outFileType = OutConfig::FileType::EXR32F;
+        else if (tStr == "exr32i")
+            oConf.outFileType = OutConfig::FileType::EXR32I;
         else
             throw std::runtime_error(fmt::format("bad output file type \"{}\"", tStr));
 

@@ -1,7 +1,7 @@
 from conans import ConanFile
 
 
-class ProjConan(ConanFile):
+class proj_conan(ConanFile):
     settings = {
         "os": ["Linux", "Windows"],
         # "compiler": {"clang": {"version": [11, 12]}},
@@ -11,11 +11,13 @@ class ProjConan(ConanFile):
     requires = (
         "gcem/1.13.1",
         "nlohmann_json/3.10.2",
+        "miniz/2.1.0",
     )
 
     build_requires = (
         "gcem/1.13.1",
         "nlohmann_json/3.10.2",
+        "miniz/2.1.0",
     )
 
     generators = "cmake"
