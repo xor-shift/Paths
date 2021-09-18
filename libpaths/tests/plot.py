@@ -5,7 +5,7 @@ dists = dict()
 def getFloatList(file):
     return [float(i) for i in file.readline().split(",") if i.strip()]
 
-with open("dists", "r") as file:
+with open("../../paths/dists", "r") as file:
     dists["uniform"] = getFloatList(file)
     dists["normalBM"] = getFloatList(file)
     dists["normalMP"] = getFloatList(file)

@@ -8,11 +8,11 @@
 #include <gfx/integrator/integrator.hpp>
 
 struct OutConfig {
-    enum class FileType {
-        PNG,
-        EXR16F,
-        EXR32F,
-        EXR32I,
+    enum class FileType: int {
+        PNG = 0,
+        EXR16F = 1,
+        EXR32F = 2,
+        EXR32I = 3,
     };
 
     //sample the integrator nSamples times

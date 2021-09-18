@@ -39,12 +39,21 @@ class Image {
 
     [[nodiscard]] std::vector<RGBSpectrum> &Data() noexcept { return data; }
 
+    void ExportPNG(const std::string &filename, Real min = 0., Real max = 1.) const;
+
+    /**
+     * Exports the image as a linear EXR image. There are three supported types numbered from 0 to 2: half, float, uint
+     * @param filename The filename to export to
+     * @param type The type of EXR pixel format to use, invalid values will default to 0
+     */
+    void ExportEXR(const std::string &filename, size_t type = 0) const;
+
     template<Concepts::Kernel Kernel>
     void ApplyKernel(const Kernel &kern) {}
 
   private:
-    size_t width;
-    size_t height;
+    size_t width{};
+    size_t height{};
     std::vector<RGBSpectrum> data{};
 };
 

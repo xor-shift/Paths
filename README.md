@@ -8,6 +8,8 @@ A path/ray tracer (no path tracing as of now)
 - [LodePNG](https://github.com/lvandeve/lodepng), Used for image output
 - [N. Lohmann's JSON library](https://github.com/nlohmann/json), Used for scene configurations and resume metadata
 - [GCEM](https://github.com/kthohr/gcem), I think I used it somewhere?
+- [TinyEXR](https://github.com/syoyo/tinyexr) For image output
+- [LodePNG](https://github.com/lvandeve/lodepng) For image output likewise
 
 {fmt} and json are managed by conan and lodepng is a submodule, you need to get fmt from your favourite package manager.
 
