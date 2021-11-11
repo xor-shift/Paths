@@ -1,6 +1,5 @@
 from conans import ConanFile
 
-
 class ProjConan(ConanFile):
     settings = {
         "os": ["Linux", "Windows"],

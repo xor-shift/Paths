@@ -1,5 +1,6 @@
 #include <gfx/stl/binary.hpp>
 
+#include <fmt/format.h>
 #include <fstream>
 
 namespace Gfx::STL::Binary {
@@ -51,6 +52,8 @@ std::vector<Triangle> ReadFile(const std::string &file) {
 
         //if (ifs.eof()) break;
     }
+
+    fmt::print("Loaded {} triangles from file {}\n", nTriangles, file);
 
     return triangles;
 }

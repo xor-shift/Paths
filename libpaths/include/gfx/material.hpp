@@ -31,8 +31,9 @@ struct Material {
 
     const AlbedoType albedo;
     const RGBSpectrum emittance{{0, 0, 0}};
+    const Real refIndex{1.000293};
     const Real metallic{0};
-    const Real roughness{0};
+    const Real roughness{1};
 };
 
 

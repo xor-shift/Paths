@@ -1,9 +1,8 @@
 #include <csignal>
 #include <fmt/format.h>
-#include <OpenColorIO/OpenColorIO.h>
-namespace OCIO = OCIO_NAMESPACE;
 
 #include <gfx/camera/filter.hpp>
+#include <gfx/obj/obj.hpp>
 
 #include "cameraSetup.hpp"
 

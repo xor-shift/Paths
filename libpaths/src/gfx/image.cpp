@@ -46,7 +46,7 @@ void Image::ExportEXR(const std::string &filename, size_t type) const {
     }
 
     float *channelsPtr[3];
-    ForEachChan([&channelsPtr](auto i, auto &c) { channelsPtr[i] = c.data(); });
+    ForEachChan([&channelsPtr](auto i, auto &c) { channelsPtr[2 - i] = c.data(); });
 
     EXRHeader exrHeader;
     InitEXRHeader(&exrHeader);

@@ -2,7 +2,8 @@
 
 #include <optional>
 
-#include "definitions.hpp"
+#include <gfx/definitions.hpp>
+#include <maths/rand.hpp>
 
 namespace Gfx {
 
@@ -58,6 +59,8 @@ struct Intersection {
         , distance(distance)
         , intersectionPoint(ray.origin + ray.direction * distance)
         , normal(normal)
+        , goingIn(Math::Dot(normal, ray.direction) < 0)
+        , orientedNormal(goingIn ? normal : -normal)
         , uv(uv)
 #ifdef LIBGFX_EMBED_RAY_STATS
     , stats(stats)
@@ -69,6 +72,8 @@ struct Intersection {
     Real distance{};
     Point intersectionPoint;
     Point normal{};
+    bool goingIn{};
+    Point orientedNormal{};
 
     Math::Vector<Real, 2> uv{{0, 0}};
 

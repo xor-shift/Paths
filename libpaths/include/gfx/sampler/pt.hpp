@@ -5,6 +5,33 @@
 
 namespace Gfx::Sampler {
 
+[[nodiscard]] inline Point OffsetIntersectionPoint(const Intersection &isection) {
+    return isection.intersectionPoint + isection.orientedNormal * EpsilonVector;
+}
+
+/**
+ * Scatters a ray randomly in the hemisphere of the face normal. Takes in no ray argument, heh
+ * @param isection
+ * @return
+ */
+[[nodiscard]] inline Ray RandScatter(const Intersection &isection) noexcept {
+    const auto dir = Math::D3RandomUnitVector();
+
+    return {
+      OffsetIntersectionPoint(isection),
+      Math::Dot(dir, isection.orientedNormal) >= 0 ? dir : -dir,
+    };
+}
+
+[[nodiscard]] inline Ray Reflect(const Ray &ray, const Intersection &isection) noexcept {
+    return {
+      OffsetIntersectionPoint(isection),
+      ray.direction - isection.orientedNormal * Math::Dot(ray.direction, isection.orientedNormal) * 2.,
+    };
+}
+
+[[nodiscard]] inline Ray Refract(const Ray &ray, const Intersection &isection, const Material &material) {}
+
 class PT {
   public:
     PT() = default;
@@ -22,20 +49,22 @@ class PT {
                 if (Math::RandomDouble() > .8) break;
             }
 
-            auto isectionOpt = scene.Intersect(currentRay);
+            const auto isectionOpt = scene.Intersect(currentRay);
             if (!isectionOpt) break;
-            const auto isection = *isectionOpt;
+            const auto &isection = *isectionOpt;
             const auto &mat = scene.GetMaterial(isection.matIndex);
-            const bool goingIn = Math::Dot(isection.normal, currentRay.direction) < 0;
-            const auto orientedNormal = isection.normal * (goingIn ? 1 : -1);
 
             wO += mat.emittance * curA;
             curA *= mat.GetAlbedo(isection.uv);
 
-            auto dir = Math::D3RandomUnitVector();
-            if (Math::Dot(dir, orientedNormal) < 0) dir = -dir;
-
-            currentRay = Ray(isection.intersectionPoint + orientedNormal * EpsilonVector, dir);
+            if (true) {
+                currentRay = RandScatter(isection);
+            } else {
+                if (Math::RandomDouble() > 0.8)
+                    currentRay = RandScatter(isection);
+                else
+                    currentRay = Reflect(currentRay, isection);
+            }
         }
 
         return wO;

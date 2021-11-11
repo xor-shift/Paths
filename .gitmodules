@@ -1,4 +1,4 @@
-[submodule "thirdparty/lodepng"]
+[submodule "libpaths/deps/lodepng"]
 	path = libpaths/deps/lodepng
 	url = https://github.com/lvandeve/lodepng
 [submodule "thirdparty/tinyexr"]
