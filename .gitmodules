@@ -1,9 +1,9 @@
-[submodule "libpaths/deps/lodepng"]
-	path = libpaths/deps/lodepng
+[submodule "thirdparty/lodepng"]
+	path = thirdparty/lodepng
 	url = https://github.com/lvandeve/lodepng
 [submodule "thirdparty/tinyexr"]
-	path = libpaths/deps/tinyexr
+	path = thirdparty/tinyexr
 	url = https://github.com/syoyo/tinyexr
-[submodule "libpaths/tests/googletest"]
-	path = libpaths/tests/googletest
+[submodule "thirdparty/googletest"]
+	path = thirdparty/googletest
 	url = https://github.com/google/googletest
