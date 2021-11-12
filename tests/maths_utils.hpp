@@ -16,7 +16,7 @@ requires (
     return std::abs(v0 - v1) <= errorMargin;
 }
 
-template<Math::Concepts::VectorExpression VE0, Math::Concepts::VectorExpression VE1>
+template<Maths::Concepts::VectorExpression VE0, Maths::Concepts::VectorExpression VE1>
 requires (VE0::vectorSize == VE1::vectorSize)
 [[nodiscard]] inline bool Vector(const VE0 &v0, const VE1 &v1) noexcept {
     for (size_t i = 0; i < VE0::vectorSize; i++)
@@ -24,7 +24,7 @@ requires (VE0::vectorSize == VE1::vectorSize)
     return true;
 }
 
-template<Math::Concepts::MatrixExpression ME0, Math::Concepts::MatrixExpression ME1>
+template<Maths::Concepts::MatrixExpression ME0, Maths::Concepts::MatrixExpression ME1>
 requires (
   ME0::cols == ME1::cols &&
   ME0::rows == ME1::rows
