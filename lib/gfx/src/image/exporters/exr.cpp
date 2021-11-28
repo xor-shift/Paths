@@ -9,7 +9,7 @@
 namespace Gfx::Image {
 
 template<std::size_t type>
-static inline bool ExportImpl(const std::string &filename, const Image &image) noexcept {
+static inline bool ExportImpl(const std::string &filename, ImageView image) noexcept {
     std::array<std::vector<float>, 3> channels;
 
     auto ForEachChan = [&channels](auto &&cb) { for (size_t i = 0; auto &c: channels) std::invoke(cb, i++, c); };
@@ -54,9 +54,9 @@ static inline bool ExportImpl(const std::string &filename, const Image &image) n
     exrHeader.requested_pixel_types = headerRequestedPixelTypes.data();
 
     constexpr int types[] = {
-        TINYEXR_PIXELTYPE_HALF,
-        TINYEXR_PIXELTYPE_FLOAT,
-        TINYEXR_PIXELTYPE_UINT
+      TINYEXR_PIXELTYPE_HALF,
+      TINYEXR_PIXELTYPE_FLOAT,
+      TINYEXR_PIXELTYPE_UINT
     };
 
     for (int i = 0; i < exrHeader.num_channels; i++) {
@@ -75,10 +75,10 @@ static inline bool ExportImpl(const std::string &filename, const Image &image) n
     return true;
 }
 
-bool Exporter<EXRExporterF16>::Export(const std::string &filename, const Image &image) { return ExportImpl<0>(filename, image); }
+bool Exporter<EXRExporterF16>::Export(const std::string &filename, ImageView image) { return ExportImpl<0>(filename, image); }
 
-bool Exporter<EXRExporterF32>::Export(const std::string &filename, const Image &image) { return ExportImpl<1>(filename, image); }
+bool Exporter<EXRExporterF32>::Export(const std::string &filename, ImageView image) { return ExportImpl<1>(filename, image); }
 
-bool Exporter<EXRExporterU32>::Export(const std::string &filename, const Image &image) { return ExportImpl<2>(filename, image); }
+bool Exporter<EXRExporterU32>::Export(const std::string &filename, ImageView image) { return ExportImpl<2>(filename, image); }
 
 }

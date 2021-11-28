@@ -16,10 +16,10 @@ template<typename T>
 concept ODHPSampler = requires(T c) {{ c() } -> std::same_as<double>; };
 
 template<typename T>
-concept V2HPSampler = requires(T c) {{ c() } -> std::same_as<Math::Vector<double, 2>>; };
+concept V2HPSampler = requires(T c) {{ c() } -> std::same_as<Maths::Vector<double, 2>>; };
 
 template<typename T>
-concept V3HPSampler = requires(T c) {{ c() } -> std::same_as<Math::Vector<double, 3>>; };
+concept V3HPSampler = requires(T c) {{ c() } -> std::same_as<Maths::Vector<double, 3>>; };
 
 }
 
@@ -70,14 +70,14 @@ inline double RandomDoubleEps() noexcept {
  * Creates uniformly distributed samples in the range 0 <= x < 1, 0 <= y < 1
  * @return
  */
-inline Math::Vector<double, 2> SampleSquareUniform() noexcept { return {{RandomDouble(), RandomDouble()}}; }
+inline Maths::Vector<double, 2> SampleSquareUniform() noexcept { return {RandomDouble(), RandomDouble()}; }
 
 /**
  * Creates two distinct normally distributed numbers
  * Uses Box-Muller Transform
  * @return The samples
  */
-inline Math::Vector<double, 2> SampleNormalBM(double mu = 0, double sigma = 1) noexcept {
+inline Maths::Vector<double, 2> SampleNormalBM(double mu = 0, double sigma = 1) noexcept {
     const auto U0 = RandomDoubleEps(), U1 = RandomDoubleEps();
 
     const auto inner = M_PI * 2. * U1;
@@ -86,10 +86,10 @@ inline Math::Vector<double, 2> SampleNormalBM(double mu = 0, double sigma = 1) n
       rhs1 = std::sin(inner);
     const auto lhs = sigma * std::sqrt(-2. * std::log(U0));
 
-    return {{lhs * rhs0 + mu, lhs * rhs1 + mu}};
+    return {lhs * rhs0 + mu, lhs * rhs1 + mu};
 }
 
-inline Math::Vector<double, 2> SampleSNDNormalBM() noexcept { return SampleNormalBM(); }
+inline Maths::Vector<double, 2> SampleSNDNormalBM() noexcept { return SampleNormalBM(); }
 
 /**
  * Creates a normally distributed number
@@ -97,7 +97,7 @@ inline Math::Vector<double, 2> SampleSNDNormalBM() noexcept { return SampleNorma
  * Equivalent to std::normal_distribution i believe
  * @return The sample
  */
-inline Math::Vector<double, 2> SampleNormalMP(double mu = 0, double sigma = 1) noexcept {
+inline Maths::Vector<double, 2> SampleNormalMP(double mu = 0, double sigma = 1) noexcept {
     double x, y, s;
 
     do {
@@ -107,7 +107,7 @@ inline Math::Vector<double, 2> SampleNormalMP(double mu = 0, double sigma = 1) n
     } while (s >= 1. || s == 0.);
 
     s = std::sqrt(-2. * log(s) / s);
-    return {{mu + sigma * x * s, mu + sigma * y * s}};
+    return {mu + sigma * x * s, mu + sigma * y * s};
 }
 
 /**
@@ -119,7 +119,7 @@ inline Math::Vector<double, 2> SampleNormalMP(double mu = 0, double sigma = 1) n
  * @return
  */
 template<long muN, long muD, long sigmaN, long sigmaD>
-inline Math::Vector<double, 2> SampleNormalMPCE() noexcept {
+inline Maths::Vector<double, 2> SampleNormalMPCE() noexcept {
     constexpr double mu = static_cast<double>(muN) / static_cast<double>(muD);
     constexpr double sigma = static_cast<double>(sigmaN) / static_cast<double>(sigmaD);
 
@@ -132,13 +132,13 @@ inline Math::Vector<double, 2> SampleNormalMPCE() noexcept {
     } while (s >= 1. || s == 0.);
 
     s = std::sqrt(-2. * log(s) / s);
-    return {{mu + sigma * x * s, mu + sigma * y * s}};
+    return {mu + sigma * x * s, mu + sigma * y * s};
 }
 
-inline Math::Vector<double, 2> SampleSNDNormalMP() noexcept { return SampleNormalMP(); }
+inline Maths::Vector<double, 2> SampleSNDNormalMP() noexcept { return SampleNormalMP(); }
 
-inline Math::Vector<double, 3> D3RandomUnitVector() {
-    auto ImplUniform = []() {
+inline Maths::Vector<double, 3> D3RandomUnitVector() {
+    auto ImplUniform = []() -> Maths::Vector<double, 3> {
         double x_1, x_2;
 
         do {
@@ -151,7 +151,7 @@ inline Math::Vector<double, 3> D3RandomUnitVector() {
         const auto y = 2. * x_2 * rhs;
         const auto z = 1. - 2. * (x_1 * x_1 + x_2 * x_2);
 
-        return Math::Vector<double, 3>{{x, y, z}};
+        return {x, y, z};
     };
 
     return ImplUniform();

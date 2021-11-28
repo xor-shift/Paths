@@ -10,7 +10,7 @@ typedef std::integral_constant<int, 0> PNGExporter;
 
 template<>
 struct Exporter<PNGExporter> {
-    [[maybe_unused]] static bool Export(const std::string &filename, const Image &image);
+    [[maybe_unused]] static bool Export(const std::string &filename, ImageView image);
 };
 
 }

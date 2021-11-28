@@ -8,15 +8,15 @@
 
 namespace Gfx::Image {
 
-bool Exporter<PNGExporter>::Export(const std::string &filename, const Image &image) {
-    auto [minp, maxp] = std::minmax_element(image.cbegin(), image.cend(), [](const Color &lhs, const Color &rhs) {
+bool Exporter<PNGExporter>::Export(const std::string &filename, ImageView image) {
+    auto[minp, maxp] = std::minmax_element(image.cbegin(), image.cend(), [](const Color &lhs, const Color &rhs) {
         return Maths::Dot(lhs, lhs) < Maths::Dot(rhs, rhs);
     });
 
-    auto filter = Gfx::Image::Filters::Unary::Sequence(
-        Gfx::Image::Filters::Unary::InvLerp(Maths::Magnitude(*minp), Maths::Magnitude(*maxp)),
-        Gfx::Image::Filters::Unary::Clamp(0, 1),
-        Gfx::Image::Filters::Unary::Oper([](ChannelType v) { return v * 255.; }));
+    auto filter = Filters::Unary::Sequence(
+      Filters::Unary::InvLerp(Maths::Magnitude(*minp), Maths::Magnitude(*maxp)),
+      Filters::Unary::Clamp(0, 1),
+      Filters::Unary::Oper([](ColorChannelType v) { return v * 255.; }));
 
     std::vector<unsigned char> imageData(image.size() * 4);
     for (size_t y = 0; y < image.height; y++) {

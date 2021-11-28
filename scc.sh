@@ -5,4 +5,5 @@ scc \
   conanfile.py \
   paths/ \
   lib/ \
-  tests/
+  tests/ \
+  main.lua

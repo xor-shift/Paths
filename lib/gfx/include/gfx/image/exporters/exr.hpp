@@ -12,17 +12,17 @@ typedef std::integral_constant<int, 3> EXRExporterU32;
 
 template<>
 struct Exporter<EXRExporterF16> {
-    [[maybe_unused]] static bool Export(const std::string &filename, const Image &image);
+    [[maybe_unused]] static bool Export(const std::string &filename, ImageView image);
 };
 
 template<>
 struct Exporter<EXRExporterF32> {
-    [[maybe_unused]] static bool Export(const std::string &filename, const Image &image);
+    [[maybe_unused]] static bool Export(const std::string &filename, ImageView image);
 };
 
 template<>
 struct Exporter<EXRExporterU32> {
-    [[maybe_unused]] static bool Export(const std::string &filename, const Image &image);
+    [[maybe_unused]] static bool Export(const std::string &filename, ImageView image);
 };
 
 }

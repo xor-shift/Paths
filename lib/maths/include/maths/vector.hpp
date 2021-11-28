@@ -95,32 +95,29 @@ struct Vector : public Impl::VectorExpr<T, Vector<T, N>> {
     static constexpr size_t vectorSize = N;
     typedef std::array<T, N> array_type;
 
+    typedef T *iterator;
+    typedef const T *const_iterator;
+    typedef std::reverse_iterator<T *> reverse_iterator;
+    typedef std::reverse_iterator<const T *> const_reverse_iterator;
+
     array_type impl{};
 
-    [[nodiscard]] auto begin() noexcept { return Utils::PtrIterator<T, N>(data()); }
+    [[nodiscard]] constexpr iterator begin() noexcept { return data(); }
 
-    [[nodiscard]] auto end() noexcept { return Utils::PtrIterator<T, N>(data(), N); }
+    [[nodiscard]] constexpr iterator end() noexcept { return data() + N; }
 
-    [[nodiscard]] auto cbegin() const noexcept { return Utils::PtrIterator<const T, N>(data()); }
+    [[nodiscard]] constexpr const_iterator cbegin() const noexcept { return data(); }
 
-    [[nodiscard]] auto cend() const noexcept { return Utils::PtrIterator<const T, N>(data(), N); }
+    [[nodiscard]] constexpr const_iterator cend() const noexcept { return data() + N; }
 
     constexpr Vector() noexcept = default;
 
     template<Concepts::VectorExpression E>
     requires (E::vectorSize == vectorSize)
-    constexpr explicit Vector(const E &expr) noexcept {
-        for (size_t i = 0; i < N; i++)
-            impl[i] = static_cast<T>(expr[i]);
-    }
+    constexpr Vector(const E &expr) noexcept { for (size_t i = 0; i < N; i++) impl[i] = static_cast<T>(expr[i]); }
 
-    constexpr explicit Vector(array_type &&v) noexcept {
-        std::copy(v.data(), v.data() + N, data());
-    }
-
-    constexpr explicit Vector(const array_type &v) noexcept {
-        std::copy(v.data(), v.data() + N, data());
-    }
+    template<typename... Ts>
+    constexpr Vector(Ts ...vs) noexcept : impl({static_cast<T>(vs)...}) {}
 
     [[nodiscard]] constexpr size_t size() const noexcept { return N; }
 
@@ -173,24 +170,24 @@ constexpr Vector &operator oper##= (U s) { for (size_t i = 0; i < vectorSize; i+
 
 template<Concepts::VectorExpression E0, typename U>
 requires std::is_convertible_v<U, typename E0::value_type>
-constexpr inline auto operator*(const E0 &e0, const U s) {
+constexpr auto operator*(const E0 &e0, const U s) {
     return Impl::VecUnaryExpr(e0, [s](auto v) { return v * s; });
 }
 
 template<Concepts::VectorExpression E0, typename U>
 requires std::is_convertible_v<U, typename E0::value_type>
-constexpr inline auto operator/(const E0 &e0, const U s) {
-    return Impl::VecUnaryExpr(e0, [s](auto v) { return v / s; });
+constexpr auto operator/(const E0 &e0, const U s) {
+    return Impl::VecUnaryExpr(e0, [s = s](auto v) { return v / s; });
 }
 
 template<Concepts::VectorExpression E0>
-constexpr inline auto operator-(const E0 &e0) { return Impl::VecUnaryExpr(e0, [](auto v) { return -v; }); }
+constexpr auto operator-(const E0 &e0) { return Impl::VecUnaryExpr(e0, [](auto v) { return -v; }); }
 
 template<Concepts::VectorExpression E0>
-constexpr inline auto Reciprocal(const E0 &e0) { return Impl::VecUnaryExpr(e0, [](auto v) { return 1. / v; }); }
+constexpr auto Reciprocal(const E0 &e0) { return Impl::VecUnaryExpr(e0, [](auto v) { return 1. / v; }); }
 
 template<Concepts::VectorExpression E0>
-constexpr inline auto Abs(const E0 &e0) { return Impl::VecUnaryExpr(e0, [](auto v) { return std::abs(v); }); }
+constexpr auto Abs(const E0 &e0) { return Impl::VecUnaryExpr(e0, [](auto v) { return std::abs(v); }); }
 
 ///////////////////////////////////////
 //// Element-wise binary operators ////
@@ -198,29 +195,33 @@ constexpr inline auto Abs(const E0 &e0) { return Impl::VecUnaryExpr(e0, [](auto 
 
 template<Concepts::VectorExpression E0, Concepts::VectorExpression E1>
 requires (E0::vectorSize == E1::vectorSize)
-constexpr inline auto operator+(const E0 &e0, const E1 &e1) { return Impl::VecBinaryExpr(e0, e1, std::plus{}); }
+constexpr auto operator+(const E0 &e0, const E1 &e1) { return Impl::VecBinaryExpr(e0, e1, std::plus{}); }
 
 template<Concepts::VectorExpression E0, Concepts::VectorExpression E1>
 requires (E0::vectorSize == E1::vectorSize)
-constexpr inline auto operator-(const E0 &e0, const E1 &e1) { return Impl::VecBinaryExpr(e0, e1, std::minus{}); }
+constexpr auto operator-(const E0 &e0, const E1 &e1) { return Impl::VecBinaryExpr(e0, e1, std::minus{}); }
 
 template<Concepts::VectorExpression E0, Concepts::VectorExpression E1>
 requires (E0::vectorSize == E1::vectorSize)
-constexpr inline auto operator*(const E0 &e0, const E1 &e1) { return Impl::VecBinaryExpr(e0, e1, std::multiplies{}); }
+constexpr auto operator*(const E0 &e0, const E1 &e1) { return Impl::VecBinaryExpr(e0, e1, std::multiplies{}); }
 
 template<Concepts::VectorExpression E0, Concepts::VectorExpression E1>
 requires (E0::vectorSize == E1::vectorSize)
-constexpr inline auto operator/(const E0 &e0, const E1 &e1) { return Impl::VecBinaryExpr(e0, e1, std::divides{}); }
+constexpr auto operator/(const E0 &e0, const E1 &e1) { return Impl::VecBinaryExpr(e0, e1, std::divides{}); }
 
 template<Concepts::VectorExpression E0, Concepts::VectorExpression E1>
-constexpr inline auto Max(const E0 &e0, const E1 &e1) {
+constexpr auto Max(const E0 &e0, const E1 &e1) {
     return Impl::VecBinaryExpr(e0, e1, [](auto v0, auto v1) {
         return std::max(v0, v1);
     });
 }
 
+/// Calculates the elementwise minimum of two vector expressions
+/// @example
+/// Min({1, 2, 3}, {3, 2, 1}) -> {1, 2, 1}
+/// \return The minimum expression
 template<Concepts::VectorExpression E0, Concepts::VectorExpression E1>
-constexpr inline auto Min(const E0 &e0, const E1 &e1) {
+constexpr auto Min(const E0 &e0, const E1 &e1) {
     return Impl::VecBinaryExpr(e0, e1, [](auto v0, auto v1) {
         return std::min(v0, v1);
     });
@@ -231,43 +232,44 @@ constexpr inline auto Min(const E0 &e0, const E1 &e1) {
 ////////////////////////
 
 template<Concepts::VectorExpression E0, Concepts::VectorExpression E1>
-constexpr inline Impl::VecCrossProduct<E0, E1> Cross(const E0 &e0, const E1 &e1) {
+constexpr Impl::VecCrossProduct<E0, E1> Cross(const E0 &e0, const E1 &e1) {
     return Impl::VecCrossProduct<E0, E1>{e0, e1};
 }
 
 template<Concepts::VectorExpression E0, Concepts::VectorExpression E1>
-constexpr inline typename E0::value_type Dot(const E0 &e0, const E1 &e1) {
+constexpr typename E0::value_type Dot(const E0 &e0, const E1 &e1) {
     typename E0::value_type sum = 0;
     for (size_t i = 0; i < E0::vectorSize; i++) sum += e0[i] * e1[i];
     return sum;
 }
 
 template<Concepts::VectorExpression E0>
-constexpr inline typename E0::value_type Magnitude(const E0 &e0) { return std::sqrt(Dot(e0, e0)); }
+constexpr typename E0::value_type Magnitude(const E0 &e0) { return std::sqrt(Dot(e0, e0)); }
 
 template<Concepts::VectorExpression E0>
-constexpr inline auto Normalized(const E0 &e0) { return e0 / Magnitude(e0); }
+constexpr auto Normalized(const E0 &e0) { return e0 / Magnitude(e0); }
 
 template<typename E0>
-constexpr inline bool IsNormalized(const E0 &e0) {
+constexpr bool IsNormalized(const E0 &e0) {
     constexpr typename E0::value_type errorMargin = 0.00001L;
     return std::abs(Magnitude(e0) - typename E0::value_type(1)) <= errorMargin;
 }
 
 }
 
-template<Maths::Concepts::VectorExpression E>
-struct fmt::formatter<E> {
+template<typename VE>
+requires Maths::Concepts::VectorExpression<VE>
+struct fmt::formatter<VE, char, std::enable_if_t<Maths::Concepts::VectorExpression<VE>, void>> {
     constexpr auto parse(auto &ctx) { return ctx.begin(); }
 
     template<typename FormatContext>
-    constexpr auto format(const E &vec, FormatContext &ctx) -> decltype(ctx.out()) {
+    constexpr auto format(const VE &vec, FormatContext &ctx) -> decltype(ctx.out()) {
         auto o = ctx.out();
 
         o = fmt::format_to(o, "(");
-        for (size_t i = 0; i < E::vectorSize; i++) {
+        for (size_t i = 0; i < VE::vectorSize; i++) {
             o = fmt::format_to(o, "{}", vec[i]);
-            if (i != E::vectorSize - 1) o = fmt::format_to(o, ",");
+            if (i != VE::vectorSize - 1) o = fmt::format_to(o, ",");
         }
         o = fmt::format_to(o, ")");
 

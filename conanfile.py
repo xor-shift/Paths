@@ -7,15 +7,15 @@ class ProjConan(ConanFile):
     }
 
     requires = (
-        "gcem/1.13.1",
-        "nlohmann_json/3.10.2",
         "miniz/2.1.0",
+        "sol2/3.2.3",
+        "lua/5.4.3",
     )
 
     build_requires = (
-        "gcem/1.13.1",
-        "nlohmann_json/3.10.2",
         "miniz/2.1.0",
+        "sol2/3.2.3",
+        "lua/5.4.3",
     )
 
     generators = "cmake"

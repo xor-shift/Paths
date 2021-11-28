@@ -15,7 +15,7 @@ constexpr T InvLerp(T a, T b, T v) noexcept {
            ? std::is_floating_point_v<T>
              ? INFINITY
              : std::numeric_limits<T>::max()
-           : (v - a) / (b - a);
+           : (v - a) / (b - a); //v/(b-a) + a/(b-a)
 }
 
 }

@@ -1,17 +1,15 @@
 # Paths
 
-A path/ray tracer (no path tracing as of now)
+A path/ray tracer
 
 ## Libraries needed
 
 - [{fmt}](https://github.com/fmtlib/fmt), Used for text output
-- [LodePNG](https://github.com/lvandeve/lodepng), Used for image output
-- [N. Lohmann's JSON library](https://github.com/nlohmann/json), Used for scene configurations and resume metadata
-- [GCEM](https://github.com/kthohr/gcem), I think I used it somewhere?
 - [TinyEXR](https://github.com/syoyo/tinyexr) For image output
 - [LodePNG](https://github.com/lvandeve/lodepng) For image output likewise
-
-{fmt} and json are managed by conan and lodepng is a submodule, you need to get fmt from your favourite package manager.
+- [GoogleTest](https://github.com/google/googletest) For tests (i swear i'll add some more tests later:tm:)
+- [Lua](https://github.com/lua/lua) For configuration (see main.lua)
+- [Sol2](https://github.com/ThePhD/sol2) As a (fast) Lua wrapper for C++
 
 ## Usage
 
@@ -26,8 +24,7 @@ Notes:
 
 ## Eye candy
 
-10k samples, 1280x720, a few thousand triangles and 3 disc lights, no explicit light sampling  
-![render from commit 5319a06 or around that one](https://github.com/xor-shift/Paths/blob/master/example%20render/out.png?raw=true)
+![render](https://github.com/xor-shift/Paths/blob/master/example%20render/304795_6019ms_14_8_4096.png?raw=true)
 
 ## Project layout
 
@@ -41,7 +38,5 @@ TODO: add layout
     - [x] Matrices and matrix operations
     - [x] Vector matrix operations
 - [x] Preview mode (simplified Whitted)
-- [x] Non-preview mode (actual MC path tracing)
-    - [ ] MLT for PT (very late goal)
-    - [ ] Volume interactions to some extent (this is also low priority, unfeasible to do without MLT)
-- [ ] Use the GPU to some extent (probably infeasible at this point, would need a complete port)
+- [ ] Proper BRDFs and importance sampling (>mfw mathlet)
+- [ ] Use the GPU to some extent (probably infeasible at this point, would need a complete port(?)))
