@@ -25,21 +25,21 @@ enum class TraversalOrder {
 /// \tparam ShapeT if !genericBoundable, this type is used for the shapes vector
 template<typename ShapeT = void>
 struct FatBVHNode final : public ShapeStore {
-    typedef Shape::boundable_shape_t<ShapeT> shape_t;
+    typedef Shape::boundable_shape_t <ShapeT> shape_t;
 
     std::vector<shape_t> shapes{};
     std::pair<Point, Point> extents{};
     std::array<std::unique_ptr<FatBVHNode>, 2> children{nullptr, nullptr};
+    FatBVHNode *parent{nullptr};
+    std::size_t id = 0; //for TBVH construction
 
     bool Split(std::size_t maxDepth, std::size_t minShapes) noexcept { return SplitImpl(maxDepth, minShapes, 0); }
 
-    /// In-order traverses the tree, calling the given callback with every node's cref
-    /// \param cb callback
-    void Traverse(auto &&cb) const noexcept {
-        if (children[0]) children[0]->Traverse(cb);
-        std::invoke(cb, static_cast<const FatBVHNode<ShapeT> &>(*this));
-        if (children[1]) children[1]->Traverse(cb);
-    }
+    template<TraversalOrder order = TraversalOrder::InOrder>
+    void Traverse(auto &&cb) const noexcept { return TraverseImpl<std::decay_t<decltype(cb)>, false, order>(std::forward(cb)); }
+
+    template<typename Callback, TraversalOrder order = TraversalOrder::InOrder>
+    void Traverse(Callback &&cb) noexcept { return TraverseImpl<Callback, true, order>(std::forward(cb)); }
 
     /// Breadth-first traverses the tree, calling the callback with every node's cref and optionally with the stack depth at the time of call (first call, for example, will have 0 passed in as the depth argument)
     /// \tparam Callable
@@ -66,6 +66,30 @@ struct FatBVHNode final : public ShapeStore {
     }
 
   private:
+    template<typename Callback, bool constCast, TraversalOrder order>
+    void TraverseImpl(Callback &&cb) const noexcept {
+        auto lhs = [this, cb = std::forward(cb)]() { if (children[0]) children[0]->template TraverseImpl<Callback, constCast, order>(cb); };
+        auto self = [this, cb = std::forward(cb)]() {
+            if constexpr (constCast) std::invoke(cb, const_cast<FatBVHNode<ShapeT> &>(*this));
+            else std::invoke(cb, static_cast<const FatBVHNode<ShapeT> &>(*this));
+        };
+        auto rhs = [this, cb = std::forward(cb)]() { if (children[1]) children[1]->template TraverseImpl<Callback, constCast, order>(cb); };
+
+        if constexpr (order == TraversalOrder::PreOrder) {
+            self();
+            lhs();
+            rhs();
+        } else if constexpr (order == TraversalOrder::InOrder) {
+            lhs();
+            rhs();
+            self();
+        } else if constexpr (order == TraversalOrder::PostOrder) {
+            lhs();
+            self();
+            rhs();
+        }
+    }
+
     bool SplitImpl(std::size_t maxDepth, std::size_t minShapes, std::size_t depth) noexcept {
         CalculateExtents();
 
@@ -109,7 +133,9 @@ struct FatBVHNode final : public ShapeStore {
         };
 
         ret[0]->extents = lhsExtents;
+        ret[0]->parent = this;
         ret[1]->extents = rhsExtents;
+        ret[1]->parent = this;
 
         for (const auto &s: shapes) {
             Shape::Apply(s, [this, &ret](const auto &s) {
@@ -174,6 +200,81 @@ struct ThreadedBVHNode {
     std::array<std::size_t, 2> shapeExtents;
     std::pair<Point, Point> extents{};
     std::array<std::size_t, 2> links;
+};
+
+template<typename ShapeT = void>
+class ThreadedBVH {
+    struct Node {
+        std::array<std::size_t, 2> shapeExtents{};
+        std::pair<Point, Point> extents{};
+        //std::array<std::size_t, 2> links{};
+        std::size_t skipLink = 0;
+    };
+
+  public:
+    typedef Shape::boundable_shape_t <ShapeT> shape_t;
+    static constexpr std::size_t npos = std::numeric_limits<std::size_t>::max();
+
+    /// This will modify the given tree in a non-destructive manner (will reorder children of nodes as needed)
+    /// \param fat
+    explicit ThreadedBVH(FatBVHNode<ShapeT> &fat) noexcept {
+        auto ReorderSingle = [](MajorAxis axis, FatBVHNode<ShapeT> &node) {
+            if (!node.children[0]) return;
+
+            Point lhs = (node.children[0]->extents.second - node.children[0]->extents.first) / static_cast<Real>(2);
+            Point rhs = (node.children[0]->extents.second - node.children[0]->extents.first) / static_cast<Real>(2);
+
+            bool doReorder = false;
+            switch (axis) {
+                case MajorAxis::PosX:
+                    doReorder = lhs[0] > rhs[0];
+                    break;
+                case MajorAxis::NegX:
+                    doReorder = lhs[0] < rhs[0];
+                    break;
+                case MajorAxis::PosY:
+                    doReorder = lhs[1] > rhs[1];
+                    break;
+                case MajorAxis::NegY:
+                    doReorder = lhs[1] < rhs[1];
+                    break;
+                case MajorAxis::PosZ:
+                    doReorder = lhs[2] > rhs[2];
+                    break;
+                case MajorAxis::NegZ:
+                    doReorder = lhs[2] < rhs[2];
+                    break;
+            }
+
+            if (doReorder)
+                node.children[0].swap(node.children[1]);
+        };
+
+        auto ReassignIDs = [ReorderSingle, &fat](MajorAxis reorderAxis) {
+            fat.Traverse<TraversalOrder::PreOrder>([ReorderSingle, id = 0](FatBVHNode<ShapeT> &node) mutable {
+                ReorderSingle(node);
+                node.id = id;
+            });
+        };
+
+        std::vector<Node> tNodes;
+        fat.Traverse<TraversalOrder::PreOrder>([ReorderSingle](FatBVHNode<ShapeT> &node) {
+            ReorderSingle(MajorAxis::PosX, node);
+
+            std::size_t miss = npos;
+        });
+    }
+
+  protected:
+  private:
+    std::vector<shape_t> shapes{};
+    std::pair<Point, Point> extents{};
+
+    std::array<std::vector<Node>, 6> nodes{};
+
+    std::size_t GetMissLink(const FatBVHNode<ShapeT> &node) {
+        if (!node.children[0]) return node.id + 1;
+    }
 };
 
 }

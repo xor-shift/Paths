@@ -7,18 +7,21 @@ class ProjConan(ConanFile):
     }
 
     requires = (
+        #"luajit/2.0.5",
+        "lua/5.4.3",
         "miniz/2.1.0",
         "sol2/3.2.3",
-        "lua/5.4.3",
     )
 
     build_requires = (
+        #"luajit/2.0.5",
+        "lua/5.4.3",
         "miniz/2.1.0",
         "sol2/3.2.3",
-        "lua/5.4.3",
     )
 
     generators = "cmake"
 
     def configure(self):
+        self.options["lua"].shared = True
         pass

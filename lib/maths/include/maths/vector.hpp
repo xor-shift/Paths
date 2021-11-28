@@ -35,7 +35,7 @@ struct VecCrossProduct : public VectorExpr<typename E0::value_type, VecCrossProd
     static constexpr size_t vectorSize = E0::vectorSize;
 
     constexpr VecCrossProduct(const E0 &e0, const E1 &e1)
-        : e0(e0), e1(e1) {}
+      : e0(e0), e1(e1) {}
 
     [[nodiscard]] constexpr auto operator[](size_t idx) const noexcept {
         if (idx == 0) return e0[1] * e1[2] - e0[2] * e1[1];
@@ -55,10 +55,10 @@ struct VecBinaryExpr : public VectorExpr<typename E0::value_type, VecBinaryExpr<
     static constexpr size_t vectorSize = E0::vectorSize;
 
     constexpr explicit VecBinaryExpr(const E0 &e0, const E1 &e1, const Op &op) noexcept(std::is_nothrow_copy_constructible_v<Op>)
-        : e0(e0), e1(e1), op(op) {}
+      : e0(e0), e1(e1), op(op) {}
 
     constexpr explicit VecBinaryExpr(const E0 &e0, const E1 &e1) noexcept(std::is_nothrow_default_constructible_v<Op>)
-        : e0(e0), e1(e1), op({}) {}
+      : e0(e0), e1(e1), op({}) {}
 
     constexpr auto operator[](size_t idx) const noexcept { return op(e0[idx], e1[idx]); }
 
@@ -75,10 +75,10 @@ struct VecUnaryExpr : public VectorExpr<typename E0::value_type, VecUnaryExpr<E0
     static constexpr size_t vectorSize = E0::vectorSize;
 
     constexpr explicit VecUnaryExpr(const E0 &e0, const Op &op) noexcept(std::is_nothrow_copy_constructible_v<Op>)
-        : e0(e0), op(op) {}
+      : e0(e0), op(op) {}
 
     constexpr explicit VecUnaryExpr(const E0 &e0) noexcept(std::is_nothrow_default_constructible_v<Op>)
-        : e0(e0), op({}) {}
+      : e0(e0), op({}) {}
 
     constexpr auto operator[](size_t idx) const noexcept { return op(e0[idx]); }
 
@@ -120,6 +120,8 @@ struct Vector : public Impl::VectorExpr<T, Vector<T, N>> {
     constexpr Vector(Ts ...vs) noexcept : impl({static_cast<T>(vs)...}) {}
 
     [[nodiscard]] constexpr size_t size() const noexcept { return N; }
+
+    [[nodiscard]] constexpr size_t max_size() const noexcept { return N; }
 
     [[nodiscard]] constexpr T operator[](size_t idx) const noexcept { return impl[idx]; }
 
@@ -257,8 +259,7 @@ constexpr bool IsNormalized(const E0 &e0) {
 
 }
 
-template<typename VE>
-requires Maths::Concepts::VectorExpression<VE>
+template<typename VE> requires Maths::Concepts::VectorExpression<VE>
 struct fmt::formatter<VE, char, std::enable_if_t<Maths::Concepts::VectorExpression<VE>, void>> {
     constexpr auto parse(auto &ctx) { return ctx.begin(); }
 

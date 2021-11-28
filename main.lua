@@ -1,51 +1,62 @@
 require "os"
 require "math"
+local posix = require "posix"
 
 function addMaterialsToScene(scene)
     scene:addMaterial("gray", {
-        albedo = point.new({ 0.33, 0.33, 0.33 })
+        albedo = point.new({ 0.33, 0.33, 0.33 }),
     })
     scene:addMaterial("red", {
-        albedo = point.new({ 1, 0, 0 })
+        albedo = point.new({ 1, 0, 0 }),
     })
     scene:addMaterial("white", {
-        albedo = point.new({ 1, 1, 1 })
+        albedo = point.new({ 1, 1, 1 }),
+        reflectance = 0.5,
     })
     scene:addMaterial("mirror", {
-        reflectance = 0.75,
-        albedo = point.new({ 1, 1, 1 })
+        reflectance = 0.9,
+        albedo = point.new({ 1, 1, 1 }),
     })
 
-    local colorMultiplier = 7;
+    local colorMultiplier = 2;
     local highColor = 5;
     local lowColor = 0.25;
     scene:addMaterial("red light", { emittance = point.new({ highColor, lowColor, lowColor }) * colorMultiplier })
     scene:addMaterial("green light", { emittance = point.new({ lowColor, highColor, lowColor }) * colorMultiplier })
     scene:addMaterial("blue light", { emittance = point.new({ lowColor, lowColor, highColor }) * colorMultiplier })
+    scene:addMaterial("bright light", { emittance = point.new({ 10, 10, 7 }) })
 end
 
-function getLightXYs(radius)
-    local arr = { { 0, 0 }, { 0, 0 }, { 0, 0 } }
+function getLightXYs(radius, z)
+    local arr = {}
 
-    arr[1][1] = radius * math.cos(math.pi / 1.5)
-    arr[2][1] = radius * math.cos(math.pi / 2.0)
-    arr[3][1] = radius * math.cos(math.pi / 3.0)
+    local angles = { 120, 90, 60, 5 }
 
-    arr[1][2] = radius * math.sin(math.pi / 1.5)
-    arr[2][2] = radius * math.sin(math.pi / 2.0)
-    arr[3][2] = radius * math.sin(math.pi / 3.0)
+    for k, v in pairs(angles) do
+        local temp = { radius * math.cos(v * (math.pi / 180.0)),
+                       radius * math.sin(v * (math.pi / 180.0)),
+                       z }
+        local pt = point.new(temp)
+
+        arr[#arr + 1] = pt
+    end
 
     return arr
 end
 
 Clock = { time = 0 }
 
+function getTimeInMS()
+    local sec, nsec = posix.clock_gettime(0)
+    return (sec * 1000.0) + (nsec / 1000000.0)
+end
+
 function Clock:reset()
-    self.time = os.time()
+    self.time = getTimeInMS()
 end
 
 function Clock:elapsed()
-    return (os.time() - self.time) * 100.0
+    return getTimeInMS() - self.time
 end
 
 function Clock:new(o)
@@ -53,7 +64,7 @@ function Clock:new(o)
     setmetatable(o, self)
 
     self.__index = self
-    self.time = os.time()
+    self.time = getTimeInMS()
 
     return o
 end
@@ -67,7 +78,7 @@ function main()
     local mirrorOffset = point.new({ 0, 0, 2.5 })
     local floorOffset = point.new({ 0, 0, 0 })
 
-    local lightXYs = getLightXYs(6)
+    local lightXYs = getLightXYs(6, -1)
 
     local l0Offset = point.new({ lightXYs[1][1], lightXYs[1][2], -1 })
     local l1Offset = point.new({ lightXYs[2][1], lightXYs[2][2], -1 })
@@ -84,14 +95,15 @@ function main()
 
     clock:reset()
     local teapot = store.newLinearTriFromSTL(
-            "objects/teapot.stl",
+            "objects/Stanford_Bunny.stl",
             scene0:resolveMaterial("white"),
             origin + teapotOffset,
-            matrix.newDegRotation(0, -90, 0) * (matrix.newIdentity() * 0.25)
+    --matrix.newDegRotation(0, -90, 0) * (matrix.newIdentity() * 0.25)
+            matrix.newDegRotation(-180, -90, 0) * (matrix.newIdentity() * 0.0375)
     )
-    print("loaded STL in " .. clock:elapsed() .. "ms")
+    print("loaded " .. teapot:shapeCount() .. " triangles in " .. clock:elapsed() .. "ms")
 
-    local treeDepth = 14
+    local treeDepth = 17
     local treeMinShapes = 8
     print("tree arguments: " .. treeDepth .. ", " .. treeMinShapes)
 
@@ -110,6 +122,11 @@ function main()
     linearStore:insertDisc(scene0:resolveMaterial("red light"), origin + l0Offset, l0Offset - teapotOffset, 1)
     linearStore:insertDisc(scene0:resolveMaterial("green light"), origin + l1Offset, l1Offset - teapotOffset, 1)
     linearStore:insertDisc(scene0:resolveMaterial("blue light"), origin + l2Offset, l2Offset - teapotOffset, 1)
+    --[[
+    linearStore:insertDisc(scene0:resolveMaterial("red light"), origin + lightOffsets[0], lightOffsets[0] - teapotOffset, 1)
+    linearStore:insertDisc(scene0:resolveMaterial("green light"), origin + lightOffsets[1], lightOffsets[1] - teapotOffset, 1)
+    linearStore:insertDisc(scene0:resolveMaterial("blue light"), origin + lightOffsets[2], lightOffsets[2] - teapotOffset, 1)
+    ]]--
 
     scene0:getStoreReference():insertChild(linearStore)
     scene0:getStoreReference():insertChild(teapot)
@@ -120,9 +137,13 @@ function main()
     integ:setScene(scene0)
 
     clock:reset()
-    local nSamples = 1
-    local tStart = os.clock()
+    local nSamples = 256
     for i = 1, nSamples, 1 do
+        if i % 10 == 0 then
+            local perSample = clock:elapsed() / i;
+            print(i .. " samples taken, " .. clock:elapsed() .. "ms spent, ETA: " .. (nSamples - i) * perSample .. "ms")
+            integ:exportImage("exrf32", "test.exr")
+        end
         integ:tick()
     end
     local msSpent = clock:elapsed()

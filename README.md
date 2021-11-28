@@ -14,8 +14,8 @@ A path/ray tracer
 ## Usage
 
 - Compile the project
-- Check out `conf.example.json` for an example camera & scene configuration file
-- Run the project like so: `./a.out conf.json`
+- Check out `main.lua` for an example camera & scene configuration file
+- Run the project like so: `./a.out main.lua`
 
 Notes:
 
@@ -37,6 +37,7 @@ TODO: add layout
     - [x] Vectors and vector operations
     - [x] Matrices and matrix operations
     - [x] Vector matrix operations
+    - [ ] Quaternions?
 - [x] Preview mode (simplified Whitted)
-- [ ] Proper BRDFs and importance sampling (>mfw mathlet)
-- [ ] Use the GPU to some extent (probably infeasible at this point, would need a complete port(?)))
+- [ ] Proper BRDFs and importance sampling (>mfw mathlet) (well i am importance sampling if the BRDF is purely diffuse and samples are uniform, aren't i? checkmate mathheads)
+- [ ] Use the GPU to some extent (probably infeasible at this point, would need a complete port(?))

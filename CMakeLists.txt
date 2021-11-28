@@ -64,9 +64,7 @@ add_library(${PATHS_LIB_NAME}_Utils INTERFACE
 target_include_directories(${PATHS_LIB_NAME}_Utils INTERFACE lib/utils/include)
 target_compile_options(${PATHS_LIB_NAME}_Utils INTERFACE -fno-exceptions)
 
-add_library(${PATHS_LIB_NAME} SHARED)
-
-target_sources(${PATHS_LIB_NAME} PRIVATE
+add_library(${PATHS_LIB_NAME} SHARED
         thirdparty/lodepng/lodepng.cpp
         thirdparty/tinyexr/tinyexr.cc
 
@@ -111,14 +109,12 @@ foreach (shape aabox disc plane sphere triangle)
 endforeach ()
 
 target_include_directories(${PATHS_LIB_NAME} PUBLIC
-        #lib/maths/include
         lib/gfx/include
-        #lib/utils/include
         thirdparty/lodepng
         thirdparty/tinyexr)
 conan_target_link_libraries(${PATHS_LIB_NAME})
 target_link_libraries(${PATHS_LIB_NAME} ${PATHS_LIB_NAME}_Maths ${PATHS_LIB_NAME}_Utils pthread omp fmt)
-target_compile_options(${PATHS_LIB_NAME} PRIVATE -fno-exceptions)
+target_compile_options(${PATHS_LIB_NAME} PUBLIC -fno-exceptions)
 
 ### TESTS ###
 
@@ -127,7 +123,7 @@ add_subdirectory(thirdparty/googletest)
 add_executable(${PATHS_TESTS_NAME}
         tests/test_test.cpp
         tests/test_maths.cpp)
-target_include_directories(${PATHS_TESTS_NAME} PRIVATE thirdparty/googletest/googletest/include)
+target_include_directories(${PATHS_TESTS_NAME} PUBLIC thirdparty/googletest/googletest/include)
 target_link_libraries(${PATHS_TESTS_NAME} ${PATHS_LIB_NAME} gtest gtest_main)
 
 add_executable(${PATHS_TESTS_NAME}_distrib
@@ -138,15 +134,30 @@ target_link_libraries(${PATHS_TESTS_NAME}_distrib ${PATHS_LIB_NAME})
 
 add_executable(${PATHS_EXEC_NAME}
         paths/main.cpp)
-target_include_directories(${PATHS_EXEC_NAME} PRIVATE
+target_include_directories(${PATHS_EXEC_NAME} PUBLIC
         lib/gfx/include)
-target_sources(${PATHS_EXEC_NAME} PRIVATE
+target_sources(${PATHS_EXEC_NAME} PUBLIC
         paths/lua.hpp
-        paths/lua.cpp)
+        paths/lua.cpp
+
+        paths/luaCompat.hpp
+        paths/luaCompat$camera.cpp
+        paths/luaCompat$integrator.cpp
+        paths/luaCompat$matrix.cpp
+        paths/luaCompat$scene.cpp
+        paths/luaCompat$store.cpp
+        paths/luaCompat$vector.cpp
+        )
 conan_target_link_libraries(${PATHS_EXEC_NAME})
 target_link_libraries(${PATHS_EXEC_NAME} ${PATHS_LIB_NAME}_Maths ${PATHS_LIB_NAME})
-target_compile_options(${PATHS_EXEC_NAME} PRIVATE
+target_compile_options(${PATHS_EXEC_NAME} PUBLIC
         -fno-exceptions
         -fopenmp)
 set_source_files_properties(paths/lua.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
+set_source_files_properties(paths/luaCompat$camera.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
+set_source_files_properties(paths/luaCompat$integrator.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
+set_source_files_properties(paths/luaCompat$matrix.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
+set_source_files_properties(paths/luaCompat$scene.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
+set_source_files_properties(paths/luaCompat$store.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
+set_source_files_properties(paths/luaCompat$vector.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
 conan_target_link_libraries(${PATHS_EXEC_NAME})
