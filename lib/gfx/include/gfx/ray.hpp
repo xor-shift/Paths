@@ -7,20 +7,21 @@
 
 namespace Gfx {
 
-#ifdef LIBGFX_EMBED_RAY_STATS
-
-struct RayStats {
-    size_t traversals{0};
-};
-
-#endif
-
 namespace Detail {
 
-static constexpr size_t MajorDirection(const Point &direction) noexcept {
+enum class MajorAxis : int {
+    PosX = 0,
+    NegX = 1,
+    PosY = 2,
+    NegY = 3,
+    PosZ = 4,
+    NegZ = 5,
+};
+
+static constexpr MajorAxis MajorDirection(const Point &direction) noexcept {
     const Point abs = Maths::Abs(direction);
     std::size_t majorAxis = std::distance(abs.cbegin(), std::max_element(abs.cbegin(), abs.cend()));
-    return (direction[majorAxis] < 0) + majorAxis * 2;
+    return static_cast<MajorAxis>((direction[majorAxis] < 0) + majorAxis * 2);
 }
 
 }
@@ -35,7 +36,7 @@ struct Ray {
     Point origin;
     Point direction;
     Point directionReciprocals;
-    size_t majorDirection;
+    Detail::MajorAxis majorDirection;
 };
 
 /*
@@ -119,6 +120,15 @@ static inline std::pair<Real, Real> BlinnPhongCoefficients(Point light, Point in
 
 static_assert(std::is_trivially_copyable_v<Ray>);
 static_assert(std::is_trivially_destructible_v<Ray>);
+
+#ifdef LIBGFX_EMBED_RAY_STATS
+
+struct RayStats {
+    std::size_t totalIntersectionChecks{0};
+    std::size_t boundIntersectionChecks{0};
+};
+
+#endif
 
 struct Intersection {
     constexpr Intersection(const Ray &ray, size_t matIndex, Real distance, Point normal = {0, 0, 0}, Maths::Vector<Real, 2> uv = {0, 0}

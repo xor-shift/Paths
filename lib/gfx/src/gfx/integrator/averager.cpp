@@ -56,7 +56,7 @@ void IntegratorAverager::AvgWorkerFn(IntegratorAverager::WorkItem &&item) noexce
         auto *dst = item.self.imageAverage.begin() + offset;
 
         for (std::size_t i = 0; i < item.self.imageSum.width; i++) {
-            dst[i] = dst[i] + src[i] / item.self.sampleCount;
+            dst[i] = src[i] / item.self.sampleCount;
         }
     }
 }

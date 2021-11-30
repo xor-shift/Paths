@@ -21,4 +21,8 @@ extern void AddSceneToLUA(sol::state &lua);
 
 extern void AddIntegratorToLUA(sol::state &lua);
 
+extern void AddImageViewToLUA(sol::state &lua);
+
+extern void AddImageToLUA(sol::state &lua);
+
 }

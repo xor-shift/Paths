@@ -1,4 +1,4 @@
-#include <gfx/integrator/sampler.hpp>
+#include <gfx/integrator/mc.hpp>
 
 namespace Gfx {
 
@@ -7,6 +7,8 @@ namespace Gfx {
     Color curA{1, 1, 1};
     Real previousCosine = 1;
 
+    std::size_t boundChecks = 0, shapeChecks = 0;
+
     Ray currentRay = ray;
 
     for (size_t depth = 0;; depth++) {
@@ -14,7 +16,7 @@ namespace Gfx {
             if (Math::RandomDouble() > .8) break;
         }
 
-        auto isection = scene.Intersect(currentRay);
+        auto isection = scene.Intersect(currentRay, boundChecks, shapeChecks);
         if (!isection) break;
 
         const auto material = scene.GetMaterial(isection->matIndex);
@@ -26,13 +28,13 @@ namespace Gfx {
             const auto lDist = Maths::Magnitude(l);
             l = l / lDist;
 
-            if (auto itemp = scene.Intersect(Ray(safeReflectionSpot, l)); itemp && itemp->distance < lDist)
+            if (auto itemp = scene.Intersect(Ray(safeReflectionSpot, l), boundChecks, shapeChecks); itemp && itemp->distance < lDist)
                 continue;
 
             lambertian = lambertian + light.color * std::max<Real>(Maths::Dot(l, isection->orientedNormal), 0);
         }*/
 
-        wO = wO + material.emittance * curA * previousCosine;
+        wO = wO + (isection->goingIn ? material.emittance : Color{}) * curA * previousCosine;
         curA = curA * material.albedo;
 
         if (Math::RandomDouble() > material.reflectance)
@@ -43,7 +45,8 @@ namespace Gfx {
         previousCosine = Maths::Dot(currentRay.direction, isection->orientedNormal);
     }
 
-    return wO;
+    if constexpr (Gfx::ProgramConfig::VisualiseRayStats) return Color{boundChecks, shapeChecks, 0};
+    else return wO;
 }
 
 }

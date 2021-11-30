@@ -75,18 +75,24 @@ add_library(${PATHS_LIB_NAME} SHARED
         lib/gfx/src/image/exporters/exr.cpp
         lib/gfx/src/image/exporters/png.cpp
 
+        lib/gfx/include/gfx/integrator/albedo.hpp
         lib/gfx/include/gfx/integrator/averager.hpp
-        lib/gfx/src/gfx/integrator/averager.cpp
         lib/gfx/include/gfx/integrator/integrator.hpp
-        lib/gfx/include/gfx/integrator/sampler.hpp
-        lib/gfx/src/gfx/integrator/mc.cpp
-        lib/gfx/src/gfx/integrator/whitted.cpp
+        lib/gfx/include/gfx/integrator/mc.hpp
         lib/gfx/include/gfx/integrator/sampler_wrapper.hpp
+        lib/gfx/include/gfx/integrator/stat.hpp
         lib/gfx/include/gfx/integrator/stub_integrator.hpp
+        lib/gfx/include/gfx/integrator/whitted.hpp
+        lib/gfx/src/gfx/integrator/albedo.cpp
+        lib/gfx/src/gfx/integrator/averager.cpp
+        lib/gfx/src/gfx/integrator/mc.cpp
+        lib/gfx/src/gfx/integrator/stat.cpp
+        lib/gfx/src/gfx/integrator/whitted.cpp
 
         lib/gfx/include/gfx/scene/bvh.hpp
         lib/gfx/include/gfx/scene/scene.hpp
         lib/gfx/include/gfx/scene/store.hpp
+        lib/gfx/include/gfx/scene/tbvh.hpp
         lib/gfx/include/gfx/scene/thinbvh.hpp
 
         lib/gfx/include/gfx/shape/shape.hpp
@@ -136,28 +142,24 @@ add_executable(${PATHS_EXEC_NAME}
         paths/main.cpp)
 target_include_directories(${PATHS_EXEC_NAME} PUBLIC
         lib/gfx/include)
+
 target_sources(${PATHS_EXEC_NAME} PUBLIC
         paths/lua.hpp
         paths/lua.cpp
 
         paths/luaCompat.hpp
-        paths/luaCompat$camera.cpp
-        paths/luaCompat$integrator.cpp
-        paths/luaCompat$matrix.cpp
-        paths/luaCompat$scene.cpp
-        paths/luaCompat$store.cpp
-        paths/luaCompat$vector.cpp
         )
+foreach(compatFile camera image integrator matrix scene store vector)
+    set(compatFile paths/luaCompat\$${compatFile}.cpp)
+    set_source_files_properties(${compatFile} PROPERTIES COMPILE_FLAGS -fexceptions)
+    #set_source_files_properties(${compatFile} PROPERTIES COMPILE_FLAGS -Wno-nonnull)
+    target_sources(${PATHS_EXEC_NAME} PUBLIC ${compatFile})
+endforeach()
+set_source_files_properties(paths/lua.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
 conan_target_link_libraries(${PATHS_EXEC_NAME})
 target_link_libraries(${PATHS_EXEC_NAME} ${PATHS_LIB_NAME}_Maths ${PATHS_LIB_NAME})
 target_compile_options(${PATHS_EXEC_NAME} PUBLIC
         -fno-exceptions
         -fopenmp)
 set_source_files_properties(paths/lua.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
-set_source_files_properties(paths/luaCompat$camera.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
-set_source_files_properties(paths/luaCompat$integrator.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
-set_source_files_properties(paths/luaCompat$matrix.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
-set_source_files_properties(paths/luaCompat$scene.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
-set_source_files_properties(paths/luaCompat$store.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
-set_source_files_properties(paths/luaCompat$vector.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
 conan_target_link_libraries(${PATHS_EXEC_NAME})

@@ -35,12 +35,11 @@ class Scene final : public ShapeStore {
     }
 
   protected:
-    [[nodiscard]] std::optional<Intersection> IntersectImpl(Ray ray) const noexcept override {
+    [[nodiscard]] std::optional<Intersection> IntersectImpl(Ray ray, std::size_t &boundChecks, std::size_t &shapeChecks) const noexcept override {
         std::optional<Intersection> bestIntersection = std::nullopt;
 
-        for (const auto &store: stores) {
-            Intersection::Replace(bestIntersection, store->Intersect(ray));
-        }
+        for (const auto &store: stores)
+            Intersection::Replace(bestIntersection, store->Intersect(ray, boundChecks, shapeChecks));
 
         return bestIntersection;
     }

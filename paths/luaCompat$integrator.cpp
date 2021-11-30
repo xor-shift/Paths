@@ -1,6 +1,10 @@
 #include "luaCompat.hpp"
 
-#include <gfx/integrator/sampler.hpp>
+#include <gfx/integrator/albedo.hpp>
+#include <gfx/integrator/averager.hpp>
+#include <gfx/integrator/mc.hpp>
+#include <gfx/integrator/stat.hpp>
+#include <gfx/integrator/whitted.hpp>
 #include <gfx/integrator/averager.hpp>
 #include <gfx/image/image.hpp>
 #include <gfx/image/exporters/exr.hpp>
@@ -15,6 +19,8 @@ extern void AddIntegratorToLUA(sol::state &lua) {
 
           if (sampler == "whitted") ret = std::make_unique<Gfx::WhittedIntegrator>();
           else if (sampler == "pt") ret = std::make_unique<Gfx::MCIntegrator>();
+          else if (sampler == "albedo") ret = std::make_unique<Gfx::AlbedoIntegrator>();
+          else if (sampler == "stat") ret = std::make_unique<Gfx::StatVisualiserIntegrator>();
 
           return {.impl = std::move(ret),};
       },
@@ -29,7 +35,9 @@ extern void AddIntegratorToLUA(sol::state &lua) {
       "exportImage", [](integrator_t &self, const std::string &type, const std::string &to) {
           if (type == "exrf32") Gfx::Image::Exporter<Gfx::Image::EXRExporterF32>::Export("test.exr", self.impl->GetImage());
           else return;
-      }
+      },
+      "getImageView", [](const integrator_t &self) -> Gfx::Image::ImageView { return self.impl->GetImage(); },
+      "clear", [](integrator_t &self) { self.impl = nullptr; }
     );
 }
 

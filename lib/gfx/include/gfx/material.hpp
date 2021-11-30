@@ -8,8 +8,8 @@ struct Material {
     Real reflectance{}; //1 means perfect mirror
     Real ior{}; //index of refraction
 
-    Point albedo{};
-    Point emittance{};
+    Color albedo{};
+    Color emittance{};
 };
 
 enum class MaterialPreset {

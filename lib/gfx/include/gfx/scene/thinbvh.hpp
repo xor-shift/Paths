@@ -18,9 +18,7 @@ struct ThinBVHTree final : public ShapeStore {
     std::vector<ThinBVHNode> nodes{};
 
   protected:
-    [[nodiscard]] std::optional<Intersection> IntersectImpl(Ray ray) const noexcept override {
-        //return Fn(ray, 0);
-
+    [[nodiscard]] std::optional<Intersection> IntersectImpl(Ray ray, std::size_t &boundChecks, std::size_t &shapeChecks) const noexcept override {
         std::stack<std::size_t> callStack{};
         callStack.push(0);
 
@@ -31,14 +29,15 @@ struct ThinBVHTree final : public ShapeStore {
             callStack.pop();
             const auto &node = nodes[current];
 
+            if constexpr (Gfx::ProgramConfig::EmbedRayStats) ++boundChecks;
             if (!Shape::AABox::EIntersects(node.extents, ray)) continue;
 
             if (const auto[seMin, seMax] = node.shapeExtents; seMax - seMin) {
-                for (std::size_t i = seMin; i < seMax; i++) {
-                    Shape::Apply(shapes[i], [ray, &best]<Concepts::Shape T>(const T &s) {
-                        Intersection::Replace(best, std::move(s.Intersect(ray)));
-                    });
-                }
+                if constexpr (Gfx::ProgramConfig::EmbedRayStats) shapeChecks += seMax - seMin;
+                Intersection::Replace(
+                  best,
+                  Shape::IntersectLinear(ray, shapes.cbegin() + seMin, shapes.cbegin() + seMax)
+                );
             } else {
                 callStack.push(node.children[1]);
                 callStack.push(node.children[0]);
@@ -59,6 +58,7 @@ std::shared_ptr<Detail::ThinBVHTree<ShapeT>> FatToThin(const Detail::FatBVHNode<
     using NodeType = Detail::FatBVHNode<ShapeT>;
 
     std::vector<typename NodeType::shape_t> shapes;
+    shapes.reserve(root.totalShapeCount);
     std::vector<Detail::ThinBVHNode> nodes;
 
     root.BreadthFirstTraverse([&nodes, &shapes](const auto &node, std::size_t stackDepth) {

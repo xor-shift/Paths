@@ -3,6 +3,7 @@
 #define LIBGFX_ENABLE_NORMAL_CHECKS
 //#define LIBGFX_SWRP_SINGLE_THREAD
 #define LIBGFX_PREFER_SPIN
+#define LIBGFX_EMBED_RAY_STATS
 
 #include <cmath>
 #include <thread>
@@ -12,6 +13,13 @@
 
 namespace Gfx {
 
+namespace ProgramConfig {
+
+static constexpr bool EmbedRayStats = true;
+static constexpr bool VisualiseRayStats = false;
+
+}
+
 typedef std::float_t Float;
 typedef std::double_t Double;
 typedef Double Real;
@@ -19,7 +27,7 @@ typedef Double Real;
 static constexpr Real inf = std::numeric_limits<Real>::infinity();
 static constexpr Real eps = std::numeric_limits<Real>::epsilon();
 static constexpr Real sensibleInf = static_cast<Real>(16777215); //2^24-1
-static constexpr Real sensibleEps = static_cast<Real>(1e-6);
+static constexpr Real sensibleEps = static_cast<Real>(1e-7);
 
 typedef Maths::Vector<Real, 3> Point;
 static constexpr Point epsilonPoint({sensibleEps, sensibleEps, sensibleEps});

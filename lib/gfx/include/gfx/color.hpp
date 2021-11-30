@@ -7,7 +7,7 @@
 
 namespace Gfx {
 
-typedef Float ColorChannelType;
+typedef Real ColorChannelType;
 typedef Maths::Vector<ColorChannelType, 3> Color;
 
 }

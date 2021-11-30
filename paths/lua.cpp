@@ -42,6 +42,8 @@ static sol::state NewLUAState() {
     Detail::AddCameraToLUA(lua);
     Detail::AddStoreToLUA(lua);
     Detail::AddSceneToLUA(lua);
+    Detail::AddImageToLUA(lua);
+    Detail::AddImageViewToLUA(lua);
     Detail::AddIntegratorToLUA(lua);
 
     auto mainTable = lua.create_table_with(

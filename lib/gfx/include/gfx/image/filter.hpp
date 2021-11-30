@@ -64,4 +64,14 @@ constexpr auto Sequence(const E0 &f0, const Es &...fNext) noexcept {
 
 }
 
+namespace Dynamic {
+
+struct Filter {
+    virtual ~Filter() = default;
+
+    virtual Color operator()(Color c) { return c; }
+};
+
+}
+
 }

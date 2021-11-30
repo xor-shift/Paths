@@ -1,11 +1,18 @@
-#include <gfx/integrator/sampler.hpp>
+#include <gfx/integrator/whitted.hpp>
 
 namespace Gfx {
 
-[[nodiscard]] Color WhittedIntegrator::SampleImpl(Ray ray, Scene &scene, std::size_t depth) const noexcept {
+[[nodiscard]] Color WhittedIntegrator::Sample(Ray ray, Scene &scene) const noexcept {
+    std::size_t boundChecks = 0, shapeChecks = 0;
+    const Color res = SampleImpl(ray, scene, 0, boundChecks, shapeChecks);
+    if constexpr (Gfx::ProgramConfig::VisualiseRayStats) return Color{boundChecks, shapeChecks};
+    else return res;
+}
+
+[[nodiscard]] Color WhittedIntegrator::SampleImpl(Ray ray, Scene &scene, std::size_t depth, std::size_t &boundChecks, std::size_t &shapeChecks) const noexcept {
     if (depth >= 8) return {};
 
-    auto isection = scene.Intersect(ray);
+    auto isection = scene.Intersect(ray, boundChecks, shapeChecks);
 
     if (!isection) return {};
 
@@ -29,7 +36,7 @@ namespace Gfx {
             const Point l = light.p - isection->intersectionPoint;
             const auto lDist = Maths::Magnitude(l);
 
-            if (auto itemp = scene.Intersect(Ray(safeReflectionSpot, l / lDist)); itemp && itemp->distance < lDist)
+            if (auto itemp = scene.Intersect(Ray(safeReflectionSpot, l / lDist), boundChecks, shapeChecks); itemp && itemp->distance < lDist)
                 continue;
 
             const auto[cLamb, cSpec] = Detail::BlinnPhongCoefficients(
@@ -46,7 +53,7 @@ namespace Gfx {
         //return isection->orientedNormal;
         return material.albedo * (lambertian + specular + ambientLight);
     } else if (action == Action::Mirror) {
-        return SampleImpl(Ray(safeReflectionSpot, Detail::Reflect(ray.direction, isection->orientedNormal)), scene, depth + 1);
+        return SampleImpl(Ray(safeReflectionSpot, Detail::Reflect(ray.direction, isection->orientedNormal)), scene, depth + 1, boundChecks, shapeChecks);
     } else {
         return {};
     }

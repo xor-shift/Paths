@@ -23,7 +23,8 @@ extern void AddSceneToLUA(sol::state &lua) {
 
           return 0;
       },
-      "resolveMaterial", [](const scene_t &self, const std::string &material) { return self.impl->ResolveMaterial(material); }
+      "resolveMaterial", [](const scene_t &self, const std::string &material) { return self.impl->ResolveMaterial(material); },
+      "clear", [](scene_t &self) { self.impl = nullptr; }
     );
 }
 

@@ -8,10 +8,10 @@ class ShapeStore {
 
     virtual bool InsertShape(Shape::Shape) noexcept { return false; }
 
-    [[nodiscard]] std::optional<Intersection> Intersect(Ray ray) const noexcept {
-        auto best = IntersectImpl(ray);
+    [[nodiscard]] std::optional<Intersection> Intersect(Ray ray, std::size_t &boundChecks, std::size_t &isectChecks) const noexcept {
+        auto best = IntersectImpl(ray, boundChecks, isectChecks);
         for (const auto &child: children)
-            Intersection::Replace(best, child->Intersect(ray));
+            Intersection::Replace(best, child->Intersect(ray, boundChecks, isectChecks));
         return best;
     }
 
@@ -24,7 +24,7 @@ class ShapeStore {
     [[nodiscard]] std::size_t ChildCount() const noexcept { return children.size(); }
 
   protected:
-    [[nodiscard]] virtual std::optional<Intersection> IntersectImpl(Ray) const noexcept = 0;
+    [[nodiscard]] virtual std::optional<Intersection> IntersectImpl(Ray, std::size_t &boundChecks, std::size_t &isectChecks) const noexcept = 0;
 
   private:
     std::vector<std::shared_ptr<ShapeStore>> children{};
@@ -52,7 +52,10 @@ struct LinearShapeStore final : public ShapeStore {
     }
 
   protected:
-    [[nodiscard]] std::optional<Intersection> IntersectImpl(Ray ray) const noexcept override {
+    [[nodiscard]] std::optional<Intersection> IntersectImpl(Ray ray, std::size_t &boundChecks, std::size_t &shapeChecks) const noexcept override {
+        if constexpr (Gfx::ProgramConfig::EmbedRayStats) {
+            shapeChecks += shapes.size();
+        }
         return Shape::IntersectLinear(ray, shapes.cbegin(), shapes.cend());
     }
 };

@@ -2,9 +2,61 @@
 
 #include <gfx/stl/binary.hpp>
 #include <gfx/scene/bvh.hpp>
+#include <gfx/scene/tbvh.hpp>
 #include <gfx/scene/thinbvh.hpp>
 
 namespace Utils::LUA::Detail {
+
+static std::shared_ptr<Gfx::ShapeStore> ToFatBVH(const std::shared_ptr<Gfx::ShapeStore> &ptr, std::size_t maxDepth, std::size_t minShapes) {
+    if (auto linear = std::dynamic_pointer_cast<Gfx::LinearShapeStore<>>(ptr); linear) {
+        return Gfx::BVH::LinearToFat(*linear, maxDepth, minShapes);
+    }
+
+    return nullptr;
+}
+
+static std::shared_ptr<Gfx::ShapeStore> ToFatBVHTri(const std::shared_ptr<Gfx::ShapeStore> &ptr, std::size_t maxDepth, std::size_t minShapes) {
+    if (auto linear = std::dynamic_pointer_cast<Gfx::LinearShapeStore<Gfx::Shape::Triangle>>(ptr); linear) {
+        return Gfx::BVH::LinearToFat(*linear, maxDepth, minShapes);
+    }
+
+    return nullptr;
+}
+
+static std::shared_ptr<Gfx::ShapeStore> ToThinBVH(const std::shared_ptr<Gfx::ShapeStore> &ptr) {
+    if (auto fatBVH = std::dynamic_pointer_cast<Gfx::BVH::Detail::FatBVHNode<>>(ptr); fatBVH) {
+        return Gfx::BVH::FatToThin(*fatBVH);
+    } else if (auto fatBVHTri = std::dynamic_pointer_cast<Gfx::BVH::Detail::FatBVHNode<Gfx::Shape::Triangle>>(ptr); fatBVHTri) {
+        return Gfx::BVH::FatToThin(*fatBVHTri);
+    }
+
+    return nullptr;
+}
+
+static std::shared_ptr<Gfx::ShapeStore> ToTBVH(const std::shared_ptr<Gfx::ShapeStore> &ptr) {
+    if (auto fatBVH = std::dynamic_pointer_cast<Gfx::BVH::Detail::FatBVHNode<>>(ptr); fatBVH) {
+        return std::make_shared<Gfx::BVH::Detail::ThreadedBVH<>>(*fatBVH);
+    } else if (auto fatBVHTri = std::dynamic_pointer_cast<Gfx::BVH::Detail::FatBVHNode<Gfx::Shape::Triangle>>(ptr); fatBVHTri) {
+        return std::make_shared<Gfx::BVH::Detail::ThreadedBVH<Gfx::Shape::Triangle>>(*fatBVHTri);
+    }
+
+    return nullptr;
+}
+
+template<typename ConvFn, typename... Args>
+bool ToHelper(store_t &self, ConvFn &convFn, Args...args) {
+    auto conv = convFn(self.impl, args...);
+    if (!conv) return false;
+    self.impl = std::move(conv);
+    return true;
+}
+
+template<typename ConvFn, typename... Args>
+store_t MakeHelper(const store_t &self, ConvFn &convFn, Args...args) {
+    auto conv = convFn(self.impl, args...);
+    if (!conv) std::abort();
+    return {std::move(conv)};
+}
 
 extern void AddStoreToLUA(sol::state &lua) {
     auto storeCompat = lua.new_usertype<store_t>(
@@ -41,38 +93,18 @@ extern void AddStoreToLUA(sol::state &lua) {
 
           return {ptr};
       },
-      "toFatBVH", [](store_t &self, std::size_t maxDepth = 7, std::size_t minShapes = 4) -> bool {
-          if (auto linear = std::dynamic_pointer_cast<Gfx::LinearShapeStore<>>(self.impl); linear) {
-              self.impl = Gfx::BVH::LinearToFat(*linear, maxDepth, minShapes);
-              return true;
-          }
-
-          return false;
-      },
-      "toFatBVHTri", [](store_t &self, std::size_t maxDepth = 7, std::size_t minShapes = 4) -> bool {
-          if (auto linearTri = std::dynamic_pointer_cast<Gfx::LinearShapeStore<Gfx::Shape::Triangle>>(self.impl); linearTri) {
-              self.impl = Gfx::BVH::LinearToFat(*linearTri, maxDepth, minShapes);
-              return true;
-          }
-
-          return false;
-      },
-      "toThinBVH", [](store_t &self) {
-          if (auto fatBVH = std::dynamic_pointer_cast<Gfx::BVH::Detail::FatBVHNode<>>(self.impl); fatBVH) {
-              auto thin = Gfx::BVH::FatToThin(*fatBVH);
-              self.impl = std::move(thin);
-              return true;
-          } else if (auto fatBVHTri = std::dynamic_pointer_cast<Gfx::BVH::Detail::FatBVHNode<Gfx::Shape::Triangle>>(self.impl); fatBVHTri) {
-              auto thin = Gfx::BVH::FatToThin(*fatBVHTri);
-              self.impl = std::move(thin);
-              return true;
-          }
-
-          return false;
-      },
+      "toFatBVH", [](store_t &self, std::size_t maxDepth = 7, std::size_t minShapes = 4) -> bool { return ToHelper(self, ToFatBVH, maxDepth, minShapes); },
+      "toFatBVHTri", [](store_t &self, std::size_t maxDepth = 7, std::size_t minShapes = 4) -> bool { return ToHelper(self, ToFatBVHTri, maxDepth, minShapes); },
+      "toThinBVH", [](store_t &self) -> bool { return ToHelper(self, ToThinBVH); },
+      "toTBVH", [](store_t &self) -> bool { return ToHelper(self, ToTBVH); },
+      "makeFatBVH", [](const store_t &self, std::size_t maxDepth = 7, std::size_t minShapes = 4) -> store_t { return MakeHelper(self, ToFatBVH, maxDepth, minShapes); },
+      "makeFatBVHTri", [](const store_t &self, std::size_t maxDepth = 7, std::size_t minShapes = 4) -> store_t { return MakeHelper(self, ToFatBVHTri, maxDepth, minShapes); },
+      "makeThinBVH", [](store_t &self) -> store_t { return MakeHelper(self, ToThinBVH); },
+      "makeTBVH", [](store_t &self) -> store_t { return MakeHelper(self, ToTBVH); },
       "insertChild", [](store_t &self, store_t &other) {
           self.impl->InsertChild(std::move(other.impl));
-      }
+      },
+      "clear", [](store_t &self) { self.impl = nullptr; }
     );
 }
 

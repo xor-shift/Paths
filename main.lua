@@ -2,62 +2,12 @@ require "os"
 require "math"
 local posix = require "posix"
 
-function addMaterialsToScene(scene)
-    scene:addMaterial("gray", {
-        albedo = point.new({ 0.33, 0.33, 0.33 }),
-    })
-    scene:addMaterial("red", {
-        albedo = point.new({ 1, 0, 0 }),
-    })
-    scene:addMaterial("white", {
-        albedo = point.new({ 1, 1, 1 }),
-        reflectance = 0.5,
-    })
-    scene:addMaterial("mirror", {
-        reflectance = 0.9,
-        albedo = point.new({ 1, 1, 1 }),
-    })
-
-    local colorMultiplier = 2;
-    local highColor = 5;
-    local lowColor = 0.25;
-    scene:addMaterial("red light", { emittance = point.new({ highColor, lowColor, lowColor }) * colorMultiplier })
-    scene:addMaterial("green light", { emittance = point.new({ lowColor, highColor, lowColor }) * colorMultiplier })
-    scene:addMaterial("blue light", { emittance = point.new({ lowColor, lowColor, highColor }) * colorMultiplier })
-    scene:addMaterial("bright light", { emittance = point.new({ 10, 10, 7 }) })
-end
-
-function getLightXYs(radius, z)
-    local arr = {}
-
-    local angles = { 120, 90, 60, 5 }
-
-    for k, v in pairs(angles) do
-        local temp = { radius * math.cos(v * (math.pi / 180.0)),
-                       radius * math.sin(v * (math.pi / 180.0)),
-                       z }
-        local pt = point.new(temp)
-
-        arr[#arr + 1] = pt
-    end
-
-    return arr
-end
-
-Clock = { time = 0 }
-
-function getTimeInMS()
+local function getTimeInMS()
     local sec, nsec = posix.clock_gettime(0)
     return (sec * 1000.0) + (nsec / 1000000.0)
 end
 
-function Clock:reset()
-    self.time = getTimeInMS()
-end
-
-function Clock:elapsed()
-    return getTimeInMS() - self.time
-end
+local Clock = { time = 0 }
 
 function Clock:new(o)
     o = o or {}
@@ -69,87 +19,230 @@ function Clock:new(o)
     return o
 end
 
-clock = Clock:new(nil)
+function Clock:reset()
+    self.time = getTimeInMS()
+end
 
-function main()
+function Clock:elapsed()
+    return getTimeInMS() - self.time
+end
+
+local clock = Clock:new(nil)
+
+local Configuration = {
+    integrator = "stat",
+    flatteningMethod = 0, -- no flattening, thin, threaded, multiple threaded
+    treeDepth = 13,
+    treeMinShapes = 8,
+    samplesToTake = 16,
+    resolution = dim2d.new({ 1280, 720 }),
+    outFilename = "",
+}
+
+function Configuration:new(o)
+    o = o or {}
+    setmetatable(o, self)
+
+    self.__index = self
+    self.integrator = "stat"
+    self.flatteningMethod = 0
+    self.treeDepth = 13
+    self.treeMinShapes = 8
+    self.samplesToTake = 16
+    self.resolution = dim2d.new({ 1280, 720 })
+    self.outFilename = ""
+
+    return o
+end
+
+function Configuration:getOutFilename()
+    if self.outFilename ~= "" then
+        return self.outFilename
+    else
+        return self.integrator .. "_" ..
+                self.flatteningMethod .. "_" ..
+                self.treeDepth .. "," ..
+                self.treeMinShapes .. "_" ..
+                self.resolution[1] .. "x" .. self.resolution[2] .. ".exr"
+    end
+end
+
+local Statistics = {
+    timeLoad = 0,
+    timeConstruct = 0,
+    timeFlatten = 0,
+    timeRender = 0,
+}
+
+function Statistics:new(o)
+    o = o or {}
+    setmetatable(o, self)
+
+    o.__index = self
+    o.timeLoad = 0
+    o.timeConstruct = 0
+    o.timeFlatten = 0
+    o.timeRender = 0
+
+    return o
+end
+
+local function doLog(conf, stats)
+    print(
+            conf.integrator .. "," ..
+                    conf.flatteningMethod .. "," ..
+                    conf.treeDepth .. "," ..
+                    conf.treeMinShapes .. "," ..
+                    conf.samplesToTake .. "," ..
+                    conf.resolution[1] .. "," .. conf.resolution[2] .. "," ..
+                    stats.timeLoad .. "," ..
+                    stats.timeConstruct .. "," ..
+                    stats.timeFlatten .. "," ..
+                    stats.timeRender
+    )
+end
+
+local model = store.newLinearTriFromSTL(
+        "objects/Stanford_Bunny.stl",
+--"objects/teapot.stl",
+        0,
+        point.new({ 0, 0, 0 }),
+        matrix.newDegRotation(-180, -90, 0) * (matrix.newIdentity() * 0.03)
+)
+
+local function doRender(conf)
+    local function getLightXYs(angles, radius, z)
+        local arr = {}
+
+        for k, v in pairs(angles) do
+            arr[#arr + 1] = point.new({ radius * math.cos(v * (math.pi / 180.0)),
+                                        radius * math.sin(v * (math.pi / 180.0)),
+                                        z })
+        end
+
+        return arr
+    end
+
+    local function addMaterialsToScene(scene)
+        scene:addMaterial("white", {
+            albedo = point.new({ 1, 1, 1 }),
+        })
+        scene:addMaterial("gray", {
+            albedo = point.new({ 0.33, 0.33, 0.33 }),
+        })
+        scene:addMaterial("red", {
+            albedo = point.new({ 1, 0, 0 }),
+        })
+        scene:addMaterial("mirror", {
+            reflectance = 0.9,
+            albedo = point.new({ 1, 1, 1 }),
+        })
+        scene:addMaterial("full mirror", {
+            reflectance = 1,
+            albedo = point.new({ 1, 1, 1 }),
+        })
+
+        local colorMultiplier = 12;
+        local highColor = 5;
+        local lowColor = 0.25;
+        scene:addMaterial("red light", { emittance = point.new({ highColor, lowColor, lowColor }) * colorMultiplier })
+        scene:addMaterial("green light", { emittance = point.new({ lowColor, highColor, lowColor }) * colorMultiplier })
+        scene:addMaterial("blue light", { emittance = point.new({ lowColor, lowColor, highColor }) * colorMultiplier })
+        scene:addMaterial("bright light", { emittance = point.new({ 10, 10, 7 }) })
+    end
+
+    local function normaliseImage(img)
+        local max = 0
+        for i = 1, #img, 1 do
+            if img[i]:magnitude() > max then
+                max = img[i]:magnitude()
+            end
+        end
+        for i = 1, #img, 1 do
+            img[i] = img[i] / max
+        end
+    end
+
+    local stats = Statistics:new()
+
     local origin = point.new({ 0, 0, 0 })
     local cameraOffset = point.new({ 0, 6.5, -12 })
-    local teapotOffset = point.new({ 0, 0, 0 })
+    local modelOffset = point.new({ 0, 0, 0 })
     local mirrorOffset = point.new({ 0, 0, 2.5 })
     local floorOffset = point.new({ 0, 0, 0 })
 
-    local lightXYs = getLightXYs(6, -1)
-
-    local l0Offset = point.new({ lightXYs[1][1], lightXYs[1][2], -1 })
-    local l1Offset = point.new({ lightXYs[2][1], lightXYs[2][2], -1 })
-    local l2Offset = point.new({ lightXYs[3][1], lightXYs[3][2], -1 })
+    local lightXYs = getLightXYs({ 120, 90, 60, 30 }, 6, -1)
 
     local cam = camera.new()
     cam.position = origin + cameraOffset
     cam.fovHint = 100
-    cam.resolution = dim2d.new({ 640, 360 })
-    cam:setLookAt(origin + teapotOffset + point.new({ 0, 2, 0 }))
+    cam.resolution = conf.resolution
+    cam:setLookAt(origin + modelOffset + point.new({ 0, 2, 0 }))
 
     local scene0 = scene.new()
     addMaterialsToScene(scene0)
 
     clock:reset()
-    local teapot = store.newLinearTriFromSTL(
-            "objects/Stanford_Bunny.stl",
-            scene0:resolveMaterial("white"),
-            origin + teapotOffset,
-    --matrix.newDegRotation(0, -90, 0) * (matrix.newIdentity() * 0.25)
-            matrix.newDegRotation(-180, -90, 0) * (matrix.newIdentity() * 0.0375)
-    )
-    print("loaded " .. teapot:shapeCount() .. " triangles in " .. clock:elapsed() .. "ms")
-
-    local treeDepth = 17
-    local treeMinShapes = 8
-    print("tree arguments: " .. treeDepth .. ", " .. treeMinShapes)
+    stats.timeLoad = clock:elapsed()
 
     clock:reset()
-    teapot:toFatBVHTri(treeDepth, treeMinShapes)
-    print("split up the tree in " .. clock:elapsed() .. "ms")
+    local lModel = model:makeFatBVHTri(conf.treeDepth, conf.treeMinShapes)
+    stats.timeConstruct = clock:elapsed()
 
     clock:reset()
-    teapot:toThinBVH()
-    print("flattened the tree in " .. clock:elapsed() .. "ms")
+    if conf.flatteningMethod == 1 then
+        lModel:toThinBVH()
+    elseif conf.flatteningMethod == 2 then
+        lModel:toTBVH()
+    end
+    stats.timeFlatten = clock:elapsed()
 
     local linearStore = store.newLinear()
-    linearStore:insertPlane(scene0:resolveMaterial("mirror"), origin + mirrorOffset, point.new({ 0, 0, -1 }))
+    --linearStore:insertPlane(scene0:resolveMaterial("mirror"), origin + mirrorOffset, point.new({ 0, 0, -1 }))
     linearStore:insertPlane(scene0:resolveMaterial("gray"), origin + floorOffset, point.new({ 0, 1, 0 }))
 
-    linearStore:insertDisc(scene0:resolveMaterial("red light"), origin + l0Offset, l0Offset - teapotOffset, 1)
-    linearStore:insertDisc(scene0:resolveMaterial("green light"), origin + l1Offset, l1Offset - teapotOffset, 1)
-    linearStore:insertDisc(scene0:resolveMaterial("blue light"), origin + l2Offset, l2Offset - teapotOffset, 1)
-    --[[
-    linearStore:insertDisc(scene0:resolveMaterial("red light"), origin + lightOffsets[0], lightOffsets[0] - teapotOffset, 1)
-    linearStore:insertDisc(scene0:resolveMaterial("green light"), origin + lightOffsets[1], lightOffsets[1] - teapotOffset, 1)
-    linearStore:insertDisc(scene0:resolveMaterial("blue light"), origin + lightOffsets[2], lightOffsets[2] - teapotOffset, 1)
-    ]]--
+    linearStore:insertDisc(scene0:resolveMaterial("red light"), origin + lightXYs[1], modelOffset - lightXYs[1], 1)
+    linearStore:insertDisc(scene0:resolveMaterial("green light"), origin + lightXYs[2], modelOffset - lightXYs[2], 1)
+    linearStore:insertDisc(scene0:resolveMaterial("blue light"), origin + lightXYs[3], modelOffset - lightXYs[3], 1)
+    --linearStore:insertDisc(scene0:resolveMaterial("bright light"), origin + lightXYs[4], teapotOffset - lightXYs[4], 1)
 
     scene0:getStoreReference():insertChild(linearStore)
-    scene0:getStoreReference():insertChild(teapot)
+    scene0:getStoreReference():insertChild(lModel)
 
-    local integ = integrator.newSamplerWrapper("pt")
+    local integ = integrator.newSamplerWrapper("stat")
     integ:wrapInAverager()
     integ:setCamera(cam)
     integ:setScene(scene0)
 
     clock:reset()
-    local nSamples = 256
+    local nSamples = conf.samplesToTake
     for i = 1, nSamples, 1 do
-        if i % 10 == 0 then
+        integ:tick()
+        --[[if i % 10 == 0 then
             local perSample = clock:elapsed() / i;
             print(i .. " samples taken, " .. clock:elapsed() .. "ms spent, ETA: " .. (nSamples - i) * perSample .. "ms")
-            integ:exportImage("exrf32", "test.exr")
-        end
-        integ:tick()
+            integ:getImageView():export("test.exr", "exrf32")
+        end]]--
     end
-    local msSpent = clock:elapsed()
-    print("took " .. msSpent .. "ms for " .. nSamples .. " samples which makes " .. msSpent / nSamples .. "ms spent per sample")
+    stats.timeRender = clock:elapsed()
 
-    integ:exportImage("exrf32", "test.exr")
+    --local img = image.new(integ:getImageView())
+    --normaliseImage(img)
+    --img:getView():export(conf:getOutFilename(), "exrf32")
+
+    return stats
 end
 
-main()
+local conf = Configuration:new()
+conf.samplesToTake = 64
+conf.resolution = dim2d.new({ 8, 8 })
+
+for method = 0, 2, 1 do
+    conf.flatteningMethod = method
+    for depth = 12,22,1 do
+        conf.treeDepth = depth
+        local stats = doRender(conf)
+        doLog(conf, stats)
+        collectgarbage("collect")
+    end
+end

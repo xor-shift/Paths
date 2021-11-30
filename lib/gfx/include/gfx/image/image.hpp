@@ -26,6 +26,12 @@ struct ImageView {
 
     [[nodiscard]] constexpr std::size_t size() const noexcept { return width * height; }
 
+    [[nodiscard]] constexpr std::size_t max_size() const noexcept { return width * height; }
+
+    [[nodiscard]] constexpr iterator begin() const noexcept { return impl; }
+
+    [[nodiscard]] constexpr iterator end() const noexcept { return impl + size(); }
+
     [[nodiscard]] constexpr const_iterator cbegin() const noexcept { return impl; }
 
     [[nodiscard]] constexpr const_iterator cend() const noexcept { return impl + size(); }
@@ -36,8 +42,12 @@ struct ImageView {
 
     [[nodiscard]] constexpr const value_type *data() const noexcept { return impl; }
 
+    [[nodiscard]] constexpr value_type &operator[](std::size_t i) noexcept { return impl[i]; }
+
+    [[nodiscard]] constexpr const value_type &operator[](std::size_t i) const noexcept { return impl[i]; }
+
     const std::size_t width{0}, height{0};
-    const value_type *const impl{nullptr};
+    value_type *const impl{nullptr};
 };
 
 template<typename Alloc = std::allocator<Color>>
@@ -87,18 +97,18 @@ class Image {
     //size constructors
 
     constexpr Image(std::size_t width, std::size_t height) noexcept(noexcept(Alloc())) requires std::is_default_constructible_v<Alloc>
-      : allocator({}), width(width), height(height), impl(allocator.allocate(size())) { std::fill(impl, impl + size(), {}); }
+      : allocator({}), width(width), height(height), impl(allocator.allocate(size())) { std::fill(impl, impl + size(), value_type{}); }
 
     constexpr Image(std::size_t width, std::size_t height, const Alloc &alloc) noexcept(noexcept(Alloc(alloc)))
-      : allocator(alloc), width(width), height(height), impl(allocator.allocate(size())) { std::fill(impl, impl + size(), {}); }
+      : allocator(alloc), width(width), height(height), impl(allocator.allocate(size())) { std::fill(impl, impl + size(), value_type{}); }
 
     //ImageView constructors
 
     constexpr explicit Image(ImageView other) noexcept(noexcept(Alloc())) requires std::is_default_constructible_v<Alloc>
-      : allocator({}), width(width), height(height), impl(allocator.allocate(size())) { std::copy(other.impl, other.impl + size() * 3, impl); }
+      : allocator({}), width(other.width), height(other.height), impl(allocator.allocate(size())) { std::copy(other.impl, other.impl + size(), impl); }
 
     constexpr explicit Image(ImageView other, const Alloc &alloc) noexcept(noexcept(Alloc(alloc)))
-      : allocator(alloc), width(width), height(height), impl(allocator.allocate(size())) { std::copy(other.impl, other.impl + size() * 3, impl); }
+      : allocator(alloc), width(other.width), height(other.height), impl(allocator.allocate(size())) { std::copy(other.impl, other.impl + size(), impl); }
 
     constexpr ~Image() noexcept {
         allocator.deallocate(impl, size());
@@ -109,6 +119,8 @@ class Image {
     [[nodiscard]] constexpr const_reference At(std::size_t x, std::size_t y) const noexcept { return impl[y * width + x]; }
 
     [[nodiscard]] constexpr std::size_t size() const noexcept { return width * height; }
+
+    [[nodiscard]] constexpr std::size_t max_size() const noexcept { return size(); }
 
     [[nodiscard]] constexpr iterator begin() noexcept { return impl; }
 
@@ -164,7 +176,7 @@ class Image {
     std::size_t width{0}, height{0};
     value_type *impl{nullptr};
 
-    constexpr explicit operator ImageView() noexcept {
+    constexpr explicit operator ImageView() const noexcept {
         return ImageView{
           .width = width,
           .height = height,
@@ -175,7 +187,7 @@ class Image {
 
 template<typename E>
 struct Exporter {
-    [[maybe_unused]] static bool Export(const std::string &filename, ImageView image) { static_assert(!std::is_same_v<E, E>, "unsupported image exporter"); return false;}
+    [[maybe_unused]] static bool Export(const std::string &filename, ImageView image) { static_assert(!std::is_same_v<E, E>, "unsupported image exporter"); return false; }
 };
 
 }
