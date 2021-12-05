@@ -26,7 +26,7 @@ find_package(OpenMP REQUIRED)
 
 ### FLAGS ###
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wall -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wall -Wextra -Wno-nonnull")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-gnu-zero-variadic-macro-arguments")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -mtune=native -funsafe-math-optimizations")
@@ -90,10 +90,13 @@ add_library(${PATHS_LIB_NAME} SHARED
         lib/gfx/src/gfx/integrator/whitted.cpp
 
         lib/gfx/include/gfx/scene/bvh.hpp
+        lib/gfx/include/gfx/scene/newtree.hpp
         lib/gfx/include/gfx/scene/scene.hpp
         lib/gfx/include/gfx/scene/store.hpp
         lib/gfx/include/gfx/scene/tbvh.hpp
         lib/gfx/include/gfx/scene/thinbvh.hpp
+        lib/gfx/include/gfx/scene/traversal.hpp
+        lib/gfx/include/gfx/scene/tree.hpp
 
         lib/gfx/include/gfx/shape/shape.hpp
         lib/gfx/include/gfx/shape/shapes.hpp

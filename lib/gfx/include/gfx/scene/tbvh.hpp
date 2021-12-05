@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bvh.hpp"
+#include "tree.hpp"
 
 namespace Gfx::BVH::Detail {
 
@@ -18,39 +19,45 @@ class ThreadedBVH final : public ShapeStore {
     static constexpr std::size_t npos = std::numeric_limits<std::size_t>::max();
 
     /// This will modify the given tree in a non-destructive manner (will reorder children of nodes as needed)
-    /// \param fat
-    explicit ThreadedBVH(FatBVHNode <ShapeT> &fat) noexcept {
-        shapes.reserve(fat.totalShapeCount);
-        extents = fat.extents;
-        Detail::Traverser<FatBVHNode<ShapeT>>::template Traverse<TraversalOrder::PreOrder>(fat, [this, id = 0](FatBVHNode<ShapeT> &node) mutable {
-            node.id = id;
-            ++id;
+    /// \param tree
+    template<Concepts::BVH::ThreadableBVH Tree>
+    explicit ThreadedBVH(Tree &tree) noexcept {
+        using node_t = typename Tree::node_t;
+
+        node_t &root = tree.Root();
+
+        //shapes.reserve(tree.GetShapes(root).size());
+        extents = tree.GetExtents(root);
+        std::size_t nodeCount = 0;
+        Detail::Traverser<Tree>::template Traverse<TraversalOrder::PreOrder>(tree, [this, &tree, &nodeCount](node_t &node) {
+            node.id = nodeCount;
+            ++nodeCount;
+
+            auto nodeShapes = tree.GetShapes(node);
 
             const std::size_t start = shapes.size();
-            std::copy(node.shapes.cbegin(), node.shapes.cend(), std::back_inserter(shapes));
+            std::copy(nodeShapes.begin(), nodeShapes.end(), std::back_inserter(shapes));
             const std::size_t end = shapes.size();
 
             nodes.push_back({{start, end}, node.extents});
         });
 
         for (std::size_t i = 0; i < 6; i++) {
-            Detail::Traverser<FatBVHNode<ShapeT>>::template Traverse<TraversalOrder::PreOrder>(fat, [axis = static_cast<MajorAxis>(i)](FatBVHNode<ShapeT> &node) {
+            Detail::Traverser<Tree>::template Traverse<TraversalOrder::PreOrder>(tree, [axis = static_cast<MajorAxis>(i)](node_t &node) {
                 node.ReorderChildren(axis);
             });
 
-            std::vector<link_t> tLinks;
-            Detail::Traverser<FatBVHNode<ShapeT>>::template Traverse<TraversalOrder::PreOrder>(fat, [&tLinks](FatBVHNode<ShapeT> &node) {
-                std::size_t miss = GetMissLink(node);
+            std::vector<link_t> tLinks(nodeCount);
+            Detail::Traverser<Tree>::template Traverse<TraversalOrder::PreOrder>(tree, [&tLinks](node_t &node) {
+                std::size_t miss = GetMissLink<Tree>(node);
                 std::size_t hit;
-                if (bool isLeaf = !node.children[0]; isLeaf) hit = miss;
-                else hit = node.children[0]->id;
-                tLinks.push_back({hit, miss});
+                if (bool isLeaf = !node.Left(); isLeaf) hit = miss;
+                else hit = node.Left()->id;
+                tLinks[node.id] = {hit, miss};
             });
 
             linksLists[i] = tLinks;
         }
-
-
     }
 
   private:
@@ -59,13 +66,16 @@ class ThreadedBVH final : public ShapeStore {
     std::vector<Node> nodes;
     std::array<std::vector<link_t>, 6> linksLists{};
 
-    static std::size_t GetMissLink(const FatBVHNode <ShapeT> &node) noexcept {
-        const FatBVHNode<ShapeT> *current = std::addressof(node);
+    template<Concepts::BVH::ThreadableBVH T>
+    static std::size_t GetMissLink(const typename T::node_t &node) noexcept {
+        using const_node_pointer_t = typename T::const_node_pointer_t;
 
-        while (current->parent) {
-            const auto &parent = *current->parent;
-            bool currentIsLeft = parent.children[0].get() == current;
-            if (currentIsLeft) return parent.children[1]->id;
+        const_node_pointer_t current = std::addressof(node);
+
+        while (current->Parent()) {
+            const auto &parent = *current->Parent();
+            bool currentIsLeft = parent.Left() == current;
+            if (currentIsLeft) return parent.Right()->id;
             current = std::addressof(parent);
         }
 

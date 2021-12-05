@@ -7,7 +7,7 @@ namespace Gfx {
 
     auto isection = scene.Intersect(ray, boundChecks, shapeChecks);
 
-    return Color{boundChecks, 0, 0};
+    return Color{boundChecks, shapeChecks, 0};
 }
 
 }

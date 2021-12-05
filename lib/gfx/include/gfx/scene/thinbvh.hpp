@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bvh.hpp"
+#include "tree.hpp"
 
 namespace Gfx::BVH::Detail {
 
@@ -53,23 +54,30 @@ struct ThinBVHTree final : public ShapeStore {
 
 namespace Gfx::BVH {
 
-template<typename ShapeT = void>
-std::shared_ptr<Detail::ThinBVHTree<ShapeT>> FatToThin(const Detail::FatBVHNode<ShapeT> &root) {
-    using NodeType = Detail::FatBVHNode<ShapeT>;
+namespace Detail {
+
+template<typename ShapeT, Concepts::BVH::TraversableBVH From>
+std::shared_ptr<ThinBVHTree<ShapeT>> FatToThin(const From &tree) {
+    //using NodeType = Detail::FatBVHNode<ShapeT>;
+    using NodeType = From;
+
+    const auto &root = tree.Root();
 
     std::vector<typename NodeType::shape_t> shapes;
-    shapes.reserve(root.totalShapeCount);
+    shapes.reserve(root.size());
     std::vector<Detail::ThinBVHNode> nodes;
 
-    root.BreadthFirstTraverse([&nodes, &shapes](const auto &node, std::size_t stackDepth) {
+    using Traverser = Detail::Traverser<NodeType>;
+    Traverser::template Traverse<Detail::TraversalOrder::BreadthFirst>(tree, [&tree, &nodes, &shapes](const auto &node, std::size_t stackDepth) {
         const std::size_t start = shapes.size();
-        std::copy(node.shapes.cbegin(), node.shapes.cend(), std::back_inserter(shapes));
+        auto nodeShapes = tree.GetShapes(node);
+        std::copy(nodeShapes.begin(), nodeShapes.end(), std::back_inserter(shapes));
         const std::size_t end = shapes.size();
 
         const std::size_t lhsChild = nodes.size() + stackDepth + 1;
         nodes.push_back({
                           .shapeExtents = {start, end},
-                          .extents = node.extents,
+                          .extents = tree.GetExtents(node),
                           .children = {lhsChild, lhsChild + 1}
                         });
     });
@@ -79,6 +87,47 @@ std::shared_ptr<Detail::ThinBVHTree<ShapeT>> FatToThin(const Detail::FatBVHNode<
     p->nodes = std::move(nodes);
 
     return p;
+}
+
+template<typename ShapeT>
+std::shared_ptr<ThinBVHTree<ShapeT>> FatToThinNew(const TraversableBVHNode<ShapeT> &root) {
+    std::vector<typename TraversableBVHNode<ShapeT>::shape_t> shapes;
+    shapes.reserve(root.GetShapes().size());
+    std::vector<Detail::ThinBVHNode> nodes;
+
+    root.template Traverse<Detail::TraversalOrder::BreadthFirst>([&nodes, &shapes](const auto &n, std::size_t stackDepth) {
+        const auto &node = dynamic_cast<const TraversableBVHNode<ShapeT> &>(n);
+
+        const std::size_t start = shapes.size();
+        auto nodeShapes = node.GetShapes();
+        std::copy(nodeShapes.begin(), nodeShapes.end(), std::back_inserter(shapes));
+        const std::size_t end = shapes.size();
+
+        const std::size_t lhsChild = nodes.size() + stackDepth + 1;
+        nodes.push_back({
+                          .shapeExtents = {start, end},
+                          .extents = node.GetExtents(),
+                          .children = {lhsChild, lhsChild + 1}
+                        });
+    });
+
+    auto p = std::make_shared<Detail::ThinBVHTree<ShapeT>>();
+    p->shapes = std::move(shapes);
+    p->nodes = std::move(nodes);
+
+    return p;
+}
+
+}
+
+/*template<typename ShapeT = void>
+std::shared_ptr<Detail::ThinBVHTree<ShapeT>> FatToThin(const Detail::FatBVHNode<ShapeT> &tree) {
+    return Detail::FatToThin<ShapeT, Detail::FatBVHNode<ShapeT>>(tree);
+}*/
+
+template<typename ShapeT = void>
+std::shared_ptr<Detail::ThinBVHTree<ShapeT>> FatToThin(const IntrudableBVHTree<ShapeT> &tree) {
+    return Detail::FatToThinNew<ShapeT>(tree.Root());
 }
 
 }
