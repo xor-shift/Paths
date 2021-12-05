@@ -5,77 +5,23 @@
 #include <span>
 #include <stack>
 
-namespace Gfx::Concepts::BVH {
-
-template<typename T>
-concept Traversable = requires(T &t, const T &ct) {
-    { t.left() } -> std::same_as<T *>;
-    { t.right() } -> std::same_as<T *>;
-    { ct.left() } -> std::same_as<const T *>;
-    { ct.right() } -> std::same_as<const T *>;
-};
-
-}
+#include "traversal.hpp"
 
 namespace Gfx::BVH::Detail {
-
-enum class MajorAxis : int {
-    PosX = 0,
-    NegX = 1,
-    PosY = 2,
-    NegY = 3,
-    PosZ = 4,
-    NegZ = 5,
-};
-
-enum class TraversalOrder {
-    PreOrder, InOrder, PostOrder,
-};
-
-
-template<Concepts::BVH::Traversable T>
-struct Traverser {
-    template<TraversalOrder order>
-    static void Traverse(T &tree, auto &&cb) {
-        using U = std::decay_t<decltype(cb)>;
-        return TraverseImpl<U, false, order>(tree, cb);
-    }
-
-    template<TraversalOrder order>
-    static void Traverse(const T &tree, auto &&cb) {
-        using U = std::decay_t<decltype(cb)>;
-        return TraverseImpl<U, true, order>(tree, cb);
-    }
-
-  private:
-    template<typename Callback, bool isConst, TraversalOrder order>
-    static void TraverseImpl(std::conditional_t<isConst, const T &, T &> node, Callback &cb) {
-        auto lhs = [&cb, &node]() { if (node.left()) TraverseImpl<Callback, isConst, order>(*node.left(), cb); };
-        auto self = [&cb, &node]() { std::invoke(cb, node); };
-        auto rhs = [&cb, &node]() { if (node.right()) TraverseImpl<Callback, isConst, order>(*node.right(), cb); };
-
-        if constexpr (order == TraversalOrder::PreOrder) {
-            self();
-            lhs();
-            rhs();
-        } else if constexpr (order == TraversalOrder::InOrder) {
-            lhs();
-            rhs();
-            self();
-        } else if constexpr (order == TraversalOrder::PostOrder) {
-            lhs();
-            self();
-            rhs();
-        }
-    }
-};
 
 /// The base BVH node type, used mainly for computing other representations but can be used as a store standalone
 /// \tparam genericBoundable if true, Shape::BoundableShape is used for the shapes vector
 /// \tparam ShapeT if !genericBoundable, this type is used for the shapes vector
 template<typename ShapeT = void>
-struct FatBVHNode final : public ShapeStore {
-    typedef Shape::boundable_shape_t <ShapeT> shape_t;
+struct FatBVHNode final
+  : public IntrudableBVHTree<ShapeT>, public IntrudableBVHNode<ShapeT> {
+    typedef Shape::boundable_shape_t<ShapeT> shape_t;
+
+    //Traversable<T> typedefs
+    typedef FatBVHNode<ShapeT> node_t;
+    typedef const FatBVHNode<ShapeT> const_node_t;
+    typedef node_t *node_pointer_t;
+    typedef const node_t *const_node_pointer_t;
 
     std::vector<shape_t> shapes{};
     std::pair<Point, Point> extents{};
@@ -86,68 +32,76 @@ struct FatBVHNode final : public ShapeStore {
 
     bool Split(std::size_t maxDepth, std::size_t minShapes) noexcept { return SplitImpl(maxDepth, minShapes, 0); }
 
-    [[nodiscard]] FatBVHNode *left() { return children[0].get(); }
+    [[nodiscard]] node_t &Root() noexcept override { return *this; }
 
-    [[nodiscard]] const FatBVHNode *left() const { return children[0].get(); }
+    [[nodiscard]] const_node_t &Root() const noexcept override { return *this; }
 
-    [[nodiscard]] FatBVHNode *right() { return children[1].get(); }
+    [[nodiscard]] node_pointer_t Left() noexcept override { return children[0].get(); }
 
-    [[nodiscard]] const FatBVHNode *right() const { return children[1].get(); }
+    [[nodiscard]] const_node_pointer_t Left() const noexcept override { return children[0].get(); }
 
-    /// Breadth-first traverses the tree, calling the callback with every node's cref and optionally with the stack depth at the time of call (first call, for example, will have 0 passed in as the depth argument)
-    /// \tparam Callable
-    /// \param cb
-    template<typename Callable>
-    void BreadthFirstTraverse(Callable &&cb) const noexcept {
-        std::list<const FatBVHNode *> queue{};
-        queue.push_back(this);
+    [[nodiscard]] node_pointer_t Right() noexcept override { return children[1].get(); }
 
-        while (!queue.empty()) {
-            const auto *current = queue.front();
-            queue.pop_front();
+    [[nodiscard]] const_node_pointer_t Right() const noexcept override { return children[1].get(); }
 
-            if constexpr (std::is_invocable_v<Callable, const FatBVHNode &>) {
-                std::invoke(cb, static_cast<const FatBVHNode &>(*current));
-            } else if constexpr (std::is_invocable_v<Callable, const FatBVHNode &, std::size_t>) {
-                std::invoke(cb, static_cast<const FatBVHNode &>(*current), queue.size());
-            } else {
-                static_assert(std::is_same_v<Callable, Callable>, "Bad Callable");
-            }
+    [[nodiscard]] node_pointer_t Parent() noexcept override { return parent; }
 
-            for (const auto &c: current->children) if (c) queue.push_back(c.get());
-        }
-    }
+    [[nodiscard]] const_node_pointer_t Parent() const noexcept override { return parent; }
+
+    [[nodiscard]] std::size_t size() const noexcept { return totalShapeCount; }
 
     void ReorderChildren(MajorAxis axis) noexcept {
         if (!children[0]) return;
 
-        Point lhs = (children[0]->extents.second - children[0]->extents.first) / static_cast<Real>(2);
-        Point rhs = (children[0]->extents.second - children[0]->extents.first) / static_cast<Real>(2);
+        auto lhs = (children[0]->extents.second - children[0]->extents.first) / static_cast<Real>(2);
+        auto rhs = (children[1]->extents.second - children[1]->extents.first) / static_cast<Real>(2);
 
-        bool doReorder = false;
-        switch (axis) {
-            case MajorAxis::PosX:
-                doReorder = lhs[0] > rhs[0];
-                break;
-            case MajorAxis::NegX:
-                doReorder = lhs[0] < rhs[0];
-                break;
-            case MajorAxis::PosY:
-                doReorder = lhs[1] > rhs[1];
-                break;
-            case MajorAxis::NegY:
-                doReorder = lhs[1] < rhs[1];
-                break;
-            case MajorAxis::PosZ:
-                doReorder = lhs[2] > rhs[2];
-                break;
-            case MajorAxis::NegZ:
-                doReorder = lhs[2] < rhs[2];
-                break;
-        }
-
-        if (doReorder)
+        if (DecideReorder(axis, lhs, rhs))
             children[0].swap(children[1]);
+    }
+
+    [[nodiscard]] std::optional<Intersection> LinearIntersect(Ray ray) const noexcept {
+        return Shape::IntersectLinear(ray, shapes.cbegin(), shapes.cend());
+    }
+
+    [[nodiscard]] std::size_t LinearSize() const noexcept { return shapes.size(); }
+
+    [[nodiscard]] std::pair<Point, Point> GetExtents(const node_t &node) const noexcept { return node.extents; }
+
+    [[nodiscard]] std::span<const shape_t> GetShapes(const node_t &node) const noexcept { return {node.shapes.cbegin(), node.shapes.cend()}; }
+
+  protected:
+    void SwapChildren() noexcept override { children[0].swap(children[1]); }
+
+    [[nodiscard]] std::size_t GetID() const noexcept override { return id; }
+
+    void SetID(std::size_t id) noexcept override { this->id = id; }
+
+    [[nodiscard]] std::pair<Point, Point> GetExtents() const noexcept override { return extents; }
+
+    [[nodiscard]] std::span<shape_t> GetShapes() noexcept override { return {shapes.begin(), shapes.end()}; }
+
+    [[nodiscard]] std::span<const shape_t> GetShapes() const noexcept override { return {shapes.cbegin(), shapes.cend()}; }
+
+    void Split(std::size_t rhsStartIndex) noexcept override {
+        rhsStartIndex = std::max(rhsStartIndex, shapes.size());
+        children = {std::make_unique<FatBVHNode>(), std::make_unique<FatBVHNode>()};
+
+        children[0]->shapes.reserve(rhsStartIndex);
+        std::copy(shapes.cbegin(), shapes.cbegin() + rhsStartIndex, std::back_inserter(children[0]->shapes));
+        children[1]->shapes.reserve(shapes.size() - rhsStartIndex);
+        std::copy(shapes.cbegin() + rhsStartIndex, shapes.cend(), std::back_inserter(children[1]->shapes));
+
+        for (auto &c: children) {
+            c->parent = this;
+            c->CalculateExtents();
+        }
+    }
+
+    void UnsplitOnce() noexcept override {
+        shapes.reserve(children[0]->shapes.size() + children[1]->shapes.size());
+        for (const auto &c: children)
+            std::copy(c->shapes.cbegin(), c->shapes.cbegin(), std::back_inserter(shapes));
     }
 
   private:
@@ -238,35 +192,30 @@ struct FatBVHNode final : public ShapeStore {
         extents.first = extents.first - epsilonPoint;
         extents.second = extents.second + epsilonPoint;
     }
-
-  protected:
-    [[nodiscard]] std::optional<Intersection> IntersectImpl(Ray ray, std::size_t &boundChecks, std::size_t &shapeChecks) const noexcept override {
-        if constexpr (Gfx::ProgramConfig::EmbedRayStats) ++boundChecks;
-
-        if (!Gfx::Shape::AABox::EIntersects(extents, ray)) return std::nullopt;
-
-        std::optional<Intersection> best = std::nullopt;
-
-        if (shapes.empty()) {
-            Intersection::Replace(best, children[0]->IntersectImpl(ray, boundChecks, shapeChecks));
-            Intersection::Replace(best, children[1]->IntersectImpl(ray, boundChecks, shapeChecks));
-        } else {
-            if constexpr (Gfx::ProgramConfig::EmbedRayStats) shapeChecks += shapes.size();
-            best = Shape::IntersectLinear(ray, shapes.cbegin(), shapes.cend());
-        }
-
-        return best;
-    }
-};
-
-template<typename ShapeT = void>
-struct FatBVHTree : public ShapeStore {
-
 };
 
 }
 
 namespace Gfx::BVH {
+
+template<typename ShapeT, typename From>
+std::vector<Shape::boundable_shape_t<ShapeT>> ConvertShapesVector(const From &store) {
+    std::vector<Gfx::Shape::boundable_shape_t<ShapeT>> extracted;
+
+    for (const auto &s: store) {
+        Gfx::Shape::Apply(s, [&extracted](auto &&s) {
+            using T = std::decay_t<decltype(s)>;
+
+            if constexpr (std::is_same_v<ShapeT, void>) {
+                if constexpr (Gfx::Concepts::Boundable<T>) extracted.emplace_back(s);
+            } else {
+                if constexpr (std::is_same_v<ShapeT, T>) extracted.emplace_back(s);
+            }
+        });
+    }
+
+    return extracted;
+}
 
 template<typename ShapeT = void>
 std::shared_ptr<Detail::FatBVHNode<ShapeT>> LinearToFat(const Gfx::LinearShapeStore<ShapeT> &store, std::size_t maxDepth = 7, std::size_t minShapes = 4) {

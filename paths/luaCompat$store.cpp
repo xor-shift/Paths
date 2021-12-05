@@ -4,6 +4,7 @@
 #include <gfx/scene/bvh.hpp>
 #include <gfx/scene/tbvh.hpp>
 #include <gfx/scene/thinbvh.hpp>
+#include <gfx/scene/tree.hpp>
 
 namespace Utils::LUA::Detail {
 
@@ -17,6 +18,8 @@ static std::shared_ptr<Gfx::ShapeStore> ToFatBVH(const std::shared_ptr<Gfx::Shap
 
 static std::shared_ptr<Gfx::ShapeStore> ToFatBVHTri(const std::shared_ptr<Gfx::ShapeStore> &ptr, std::size_t maxDepth, std::size_t minShapes) {
     if (auto linear = std::dynamic_pointer_cast<Gfx::LinearShapeStore<Gfx::Shape::Triangle>>(ptr); linear) {
+        auto vec = Gfx::BVH::ConvertShapesVector<Gfx::Shape::Triangle>(linear->shapes);
+        //return std::make_shared<Gfx::BVH::Detail::FatBVHTree<Gfx::Shape::Triangle>>(std::move(vec), maxDepth, minShapes);
         return Gfx::BVH::LinearToFat(*linear, maxDepth, minShapes);
     }
 
@@ -25,9 +28,9 @@ static std::shared_ptr<Gfx::ShapeStore> ToFatBVHTri(const std::shared_ptr<Gfx::S
 
 static std::shared_ptr<Gfx::ShapeStore> ToThinBVH(const std::shared_ptr<Gfx::ShapeStore> &ptr) {
     if (auto fatBVH = std::dynamic_pointer_cast<Gfx::BVH::Detail::FatBVHNode<>>(ptr); fatBVH) {
-        return Gfx::BVH::FatToThin(*fatBVH);
+        return Gfx::BVH::FatToThin<>(*fatBVH);
     } else if (auto fatBVHTri = std::dynamic_pointer_cast<Gfx::BVH::Detail::FatBVHNode<Gfx::Shape::Triangle>>(ptr); fatBVHTri) {
-        return Gfx::BVH::FatToThin(*fatBVHTri);
+        return Gfx::BVH::FatToThin<Gfx::Shape::Triangle>(*fatBVHTri);
     }
 
     return nullptr;
@@ -101,9 +104,7 @@ extern void AddStoreToLUA(sol::state &lua) {
       "makeFatBVHTri", [](const store_t &self, std::size_t maxDepth = 7, std::size_t minShapes = 4) -> store_t { return MakeHelper(self, ToFatBVHTri, maxDepth, minShapes); },
       "makeThinBVH", [](store_t &self) -> store_t { return MakeHelper(self, ToThinBVH); },
       "makeTBVH", [](store_t &self) -> store_t { return MakeHelper(self, ToTBVH); },
-      "insertChild", [](store_t &self, store_t &other) {
-          self.impl->InsertChild(std::move(other.impl));
-      },
+      "insertChild", [](store_t &self, store_t &other) { self.impl->InsertChild(std::move(other.impl)); },
       "clear", [](store_t &self) { self.impl = nullptr; }
     );
 }

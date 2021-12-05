@@ -52,5 +52,23 @@ std::optional<Intersection> IntersectLinear(Ray ray, It begin, It end) {
     return best;
 }
 
+template<typename ShapeT, typename From>
+std::vector<boundable_shape_t<ShapeT>> ConvertShapesVector(const From &store) {
+    std::vector<Gfx::Shape::boundable_shape_t<ShapeT>> extracted;
+
+    for (const auto &s: store) {
+        Gfx::Shape::Apply(s, [&extracted](auto &&s) {
+            using T = std::decay_t<decltype(s)>;
+
+            if constexpr (std::is_same_v<ShapeT, void>) {
+                if constexpr (Gfx::Concepts::Boundable<T>) extracted.emplace_back(s);
+            } else {
+                if constexpr (std::is_same_v<ShapeT, T>) extracted.emplace_back(s);
+            }
+        });
+    }
+
+    return extracted;
+}
 
 }

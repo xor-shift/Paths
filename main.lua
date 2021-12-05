@@ -35,7 +35,10 @@ local Configuration = {
     treeDepth = 13,
     treeMinShapes = 8,
     samplesToTake = 16,
+    printProgress = false,
     resolution = dim2d.new({ 1280, 720 }),
+    outputFile = true,
+    normaliseOutput = false,
     outFilename = "",
 }
 
@@ -49,7 +52,10 @@ function Configuration:new(o)
     self.treeDepth = 13
     self.treeMinShapes = 8
     self.samplesToTake = 16
+    self.printProgress = false
     self.resolution = dim2d.new({ 1280, 720 })
+    self.outputFile = true
+    self.normaliseOutput = false
     self.outFilename = ""
 
     return o
@@ -102,13 +108,23 @@ local function doLog(conf, stats)
     )
 end
 
-local model = store.newLinearTriFromSTL(
-        "objects/Stanford_Bunny.stl",
---"objects/teapot.stl",
-        0,
-        point.new({ 0, 0, 0 }),
-        matrix.newDegRotation(-180, -90, 0) * (matrix.newIdentity() * 0.03)
-)
+local modelToLoad = 0
+local model
+if modelToLoad == 0 then
+    model = store.newLinearTriFromSTL(
+            "objects/teapot.stl",
+            0,
+            point.new({ 0, 0, 0 }),
+            matrix.newDegRotation(-180, -90, 0) * (matrix.newIdentity() * 0.25)
+    )
+elseif modelToLoad == 1 then
+    model = store.newLinearTriFromSTL(
+            "objects/Stanford_Bunny.stl",
+            0,
+            point.new({ 0, 0, 0 }),
+            matrix.newDegRotation(-180, -90, 0) * (matrix.newIdentity() * 0.0325)
+    )
+end
 
 local function doRender(conf)
     local function getLightXYs(angles, radius, z)
@@ -209,7 +225,7 @@ local function doRender(conf)
     scene0:getStoreReference():insertChild(linearStore)
     scene0:getStoreReference():insertChild(lModel)
 
-    local integ = integrator.newSamplerWrapper("stat")
+    local integ = integrator.newSamplerWrapper(conf.integrator)
     integ:wrapInAverager()
     integ:setCamera(cam)
     integ:setScene(scene0)
@@ -218,31 +234,53 @@ local function doRender(conf)
     local nSamples = conf.samplesToTake
     for i = 1, nSamples, 1 do
         integ:tick()
-        --[[if i % 10 == 0 then
+        if i % 10 == 0 and conf.printProgress then
             local perSample = clock:elapsed() / i;
             print(i .. " samples taken, " .. clock:elapsed() .. "ms spent, ETA: " .. (nSamples - i) * perSample .. "ms")
-            integ:getImageView():export("test.exr", "exrf32")
-        end]]--
+            --integ:getImageView():export("test.exr", "exrf32")
+        end
     end
     stats.timeRender = clock:elapsed()
 
-    --local img = image.new(integ:getImageView())
-    --normaliseImage(img)
-    --img:getView():export(conf:getOutFilename(), "exrf32")
+    if conf.outputFile then
+        if conf.normaliseOutput then
+            local img = image.new(integ:getImageView())
+            normaliseImage(img)
+            img:getView():export(conf:getOutFilename(), "exrf32")
+        else
+            integ:getImageView():export(conf:getOutFilename(), "exrf32")
+        end
+    end
 
     return stats
 end
 
 local conf = Configuration:new()
 conf.samplesToTake = 64
-conf.resolution = dim2d.new({ 8, 8 })
+conf.resolution = dim2d.new({ 640, 360 })
+conf.normaliseOutput = true
 
-for method = 0, 2, 1 do
-    conf.flatteningMethod = method
-    for depth = 12,22,1 do
-        conf.treeDepth = depth
-        local stats = doRender(conf)
-        doLog(conf, stats)
-        collectgarbage("collect")
+local benchmark = false
+
+if benchmark then
+    for method = 0, 2, 1 do
+        conf.flatteningMethod = method
+        for depth = 12, 22, 1 do
+            conf.treeDepth = depth
+            local stats = doRender(conf)
+            doLog(conf, stats)
+            collectgarbage("collect")
+        end
     end
+else
+    conf.resolution = dim2d.new({ 640, 360 })
+    conf.normaliseOutput = false
+    conf.integrator = "pt"
+    conf.flatteningMethod = 1
+    conf.treeDepth = 20
+    conf.treeMinShapes = 8
+    conf.outFilename = "test.exr"
+    conf.outputFile = true
+    local stats = doRender(conf)
+    doLog(conf, stats)
 end
