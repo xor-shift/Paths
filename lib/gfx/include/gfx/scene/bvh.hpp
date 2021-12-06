@@ -13,9 +13,12 @@ namespace Gfx::BVH::Detail {
 /// \tparam genericBoundable if true, Shape::BoundableShape is used for the shapes vector
 /// \tparam ShapeT if !genericBoundable, this type is used for the shapes vector
 template<typename ShapeT = void>
-struct FatBVHNode final
+class FatBVHNode
   : public IntrudableBVHTree<ShapeT>, public IntrudableBVHNode<ShapeT> {
+  public:
     typedef Shape::boundable_shape_t<ShapeT> shape_t;
+
+    ~FatBVHNode() noexcept override = default;
 
     //Traversable<T> typedefs
     typedef FatBVHNode<ShapeT> node_t;
@@ -23,6 +26,7 @@ struct FatBVHNode final
     typedef node_t *node_pointer_t;
     typedef const node_t *const_node_pointer_t;
 
+    //holy hell this is a mess, will scrap this class anyways
     std::vector<shape_t> shapes{};
     std::pair<Point, Point> extents{};
     std::array<std::unique_ptr<FatBVHNode>, 2> children{nullptr, nullptr};
@@ -30,23 +34,21 @@ struct FatBVHNode final
     std::size_t id = 0; //for TBVH construction
     std::size_t totalShapeCount = 0; //memoization
 
-    bool Split(std::size_t maxDepth, std::size_t minShapes) noexcept { return SplitImpl(maxDepth, minShapes, 0); }
+    [[nodiscard]] FatBVHNode &Root() noexcept { return *this; }
 
-    [[nodiscard]] node_t &Root() noexcept override { return *this; }
+    [[nodiscard]] const FatBVHNode &Root() const noexcept { return *this; }
 
-    [[nodiscard]] const_node_t &Root() const noexcept override { return *this; }
+    [[nodiscard]] Traversable *Left() noexcept override { return children[0].get(); }
 
-    [[nodiscard]] node_pointer_t Left() noexcept override { return children[0].get(); }
+    [[nodiscard]] const Traversable *Left() const noexcept override { return children[0].get(); }
 
-    [[nodiscard]] const_node_pointer_t Left() const noexcept override { return children[0].get(); }
+    [[nodiscard]] Traversable *Right() noexcept override { return children[1].get(); }
 
-    [[nodiscard]] node_pointer_t Right() noexcept override { return children[1].get(); }
+    [[nodiscard]] const Traversable *Right() const noexcept override { return children[1].get(); }
 
-    [[nodiscard]] const_node_pointer_t Right() const noexcept override { return children[1].get(); }
+    [[nodiscard]] Traversable *Parent() noexcept override { return parent; }
 
-    [[nodiscard]] node_pointer_t Parent() noexcept override { return parent; }
-
-    [[nodiscard]] const_node_pointer_t Parent() const noexcept override { return parent; }
+    [[nodiscard]] const Traversable *Parent() const noexcept override { return parent; }
 
     [[nodiscard]] std::size_t size() const noexcept { return totalShapeCount; }
 
@@ -70,7 +72,10 @@ struct FatBVHNode final
 
     [[nodiscard]] std::span<const shape_t> GetShapes(const node_t &node) const noexcept { return {node.shapes.cbegin(), node.shapes.cend()}; }
 
-  protected:
+    bool Split(std::size_t maxDepth, std::size_t minShapes) noexcept { return SplitImpl(maxDepth, minShapes, 0); }
+
+    ///
+
     void SwapChildren() noexcept override { children[0].swap(children[1]); }
 
     [[nodiscard]] std::size_t GetID() const noexcept override { return id; }

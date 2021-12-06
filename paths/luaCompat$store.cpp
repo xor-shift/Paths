@@ -27,19 +27,19 @@ static std::shared_ptr<Gfx::ShapeStore> ToFatBVHTri(const std::shared_ptr<Gfx::S
 }
 
 static std::shared_ptr<Gfx::ShapeStore> ToThinBVH(const std::shared_ptr<Gfx::ShapeStore> &ptr) {
-    if (auto fatBVH = std::dynamic_pointer_cast<Gfx::BVH::Detail::FatBVHNode<>>(ptr); fatBVH) {
-        return Gfx::BVH::FatToThin<>(*fatBVH);
-    } else if (auto fatBVHTri = std::dynamic_pointer_cast<Gfx::BVH::Detail::FatBVHNode<Gfx::Shape::Triangle>>(ptr); fatBVHTri) {
-        return Gfx::BVH::FatToThin<Gfx::Shape::Triangle>(*fatBVHTri);
+    if (auto fatBVH = std::dynamic_pointer_cast<Gfx::BVH::TraversableBVHTree<>>(ptr); fatBVH) {
+        return Gfx::BVH::FatToThin(*fatBVH);
+    } else if (auto fatBVHTri = std::dynamic_pointer_cast<Gfx::BVH::TraversableBVHTree<Gfx::Shape::Triangle>>(ptr); fatBVHTri) {
+        return Gfx::BVH::FatToThin(*fatBVHTri);
     }
 
     return nullptr;
 }
 
 static std::shared_ptr<Gfx::ShapeStore> ToTBVH(const std::shared_ptr<Gfx::ShapeStore> &ptr) {
-    if (auto fatBVH = std::dynamic_pointer_cast<Gfx::BVH::Detail::FatBVHNode<>>(ptr); fatBVH) {
+    if (auto fatBVH = std::dynamic_pointer_cast<Gfx::BVH::ThreadableBVHTree<>>(ptr); fatBVH) {
         return std::make_shared<Gfx::BVH::Detail::ThreadedBVH<>>(*fatBVH);
-    } else if (auto fatBVHTri = std::dynamic_pointer_cast<Gfx::BVH::Detail::FatBVHNode<Gfx::Shape::Triangle>>(ptr); fatBVHTri) {
+    } else if (auto fatBVHTri = std::dynamic_pointer_cast<Gfx::BVH::ThreadableBVHTree<Gfx::Shape::Triangle>>(ptr); fatBVHTri) {
         return std::make_shared<Gfx::BVH::Detail::ThreadedBVH<Gfx::Shape::Triangle>>(*fatBVHTri);
     }
 

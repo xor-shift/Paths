@@ -14,7 +14,7 @@ static volatile std::sig_atomic_t sigVar = 0;
 
 void SIGHandler(int signum) { sigVar = signum; }
 
-static int CheckSignal() {
+[[maybe_unused]] static int CheckSignal() {
     int r = sigVar;
     sigVar = 0;
     return r;

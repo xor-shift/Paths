@@ -56,41 +56,8 @@ namespace Gfx::BVH {
 
 namespace Detail {
 
-template<typename ShapeT, Concepts::BVH::TraversableBVH From>
-std::shared_ptr<ThinBVHTree<ShapeT>> FatToThin(const From &tree) {
-    //using NodeType = Detail::FatBVHNode<ShapeT>;
-    using NodeType = From;
-
-    const auto &root = tree.Root();
-
-    std::vector<typename NodeType::shape_t> shapes;
-    shapes.reserve(root.size());
-    std::vector<Detail::ThinBVHNode> nodes;
-
-    using Traverser = Detail::Traverser<NodeType>;
-    Traverser::template Traverse<Detail::TraversalOrder::BreadthFirst>(tree, [&tree, &nodes, &shapes](const auto &node, std::size_t stackDepth) {
-        const std::size_t start = shapes.size();
-        auto nodeShapes = tree.GetShapes(node);
-        std::copy(nodeShapes.begin(), nodeShapes.end(), std::back_inserter(shapes));
-        const std::size_t end = shapes.size();
-
-        const std::size_t lhsChild = nodes.size() + stackDepth + 1;
-        nodes.push_back({
-                          .shapeExtents = {start, end},
-                          .extents = tree.GetExtents(node),
-                          .children = {lhsChild, lhsChild + 1}
-                        });
-    });
-
-    auto p = std::make_shared<Detail::ThinBVHTree<ShapeT>>();
-    p->shapes = std::move(shapes);
-    p->nodes = std::move(nodes);
-
-    return p;
-}
-
 template<typename ShapeT>
-std::shared_ptr<ThinBVHTree<ShapeT>> FatToThinNew(const TraversableBVHNode<ShapeT> &root) {
+std::shared_ptr<ThinBVHTree<ShapeT>> FatToThin(const TraversableBVHNode<ShapeT> &root) {
     std::vector<typename TraversableBVHNode<ShapeT>::shape_t> shapes;
     shapes.reserve(root.GetShapes().size());
     std::vector<Detail::ThinBVHNode> nodes;
@@ -120,14 +87,9 @@ std::shared_ptr<ThinBVHTree<ShapeT>> FatToThinNew(const TraversableBVHNode<Shape
 
 }
 
-/*template<typename ShapeT = void>
-std::shared_ptr<Detail::ThinBVHTree<ShapeT>> FatToThin(const Detail::FatBVHNode<ShapeT> &tree) {
-    return Detail::FatToThin<ShapeT, Detail::FatBVHNode<ShapeT>>(tree);
-}*/
-
 template<typename ShapeT = void>
-std::shared_ptr<Detail::ThinBVHTree<ShapeT>> FatToThin(const IntrudableBVHTree<ShapeT> &tree) {
-    return Detail::FatToThinNew<ShapeT>(tree.Root());
+std::shared_ptr<Detail::ThinBVHTree<ShapeT>> FatToThin(const TraversableBVHTree<ShapeT> &tree) {
+    return Detail::FatToThin<ShapeT>(dynamic_cast<const TraversableBVHNode<ShapeT> &>(tree.Root()));
 }
 
 }

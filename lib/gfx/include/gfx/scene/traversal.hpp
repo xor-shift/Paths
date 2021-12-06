@@ -262,17 +262,17 @@ class Traversable {
 
     [[nodiscard]] bool IsLeaf() const noexcept { return !Left(); }
 
-    virtual Traversable *Left() noexcept = 0;
+    [[nodiscard]] virtual Traversable *Left() noexcept = 0;
 
-    virtual const Traversable *Left() const noexcept = 0;
+    [[nodiscard]] virtual const Traversable *Left() const noexcept = 0;
 
-    virtual Traversable *Right() noexcept = 0;
+    [[nodiscard]] virtual Traversable *Right() noexcept = 0;
 
-    virtual const Traversable *Right() const noexcept = 0;
+    [[nodiscard]] virtual const Traversable *Right() const noexcept = 0;
 
-    virtual Traversable *Parent() noexcept = 0;
+    [[nodiscard]] virtual Traversable *Parent() noexcept = 0;
 
-    virtual const Traversable *Parent() const noexcept = 0;
+    [[nodiscard]] virtual const Traversable *Parent() const noexcept = 0;
 
   private:
     template<bool isConst>
@@ -284,14 +284,14 @@ class Traversable {
     template<typename Callback, bool isConst, Detail::TraversalOrder order>
     void TraverseImpl(Callback &cb) const {
         if constexpr (order == Detail::TraversalOrder::BreadthFirst) return TraverseImplImplBFS<Callback, isConst>(cb);
-        else return TraverseImplImpl<Callback, isConst, order>(*this, cb);
+        else return TraverseImplImpl<Callback, isConst, order>(cb);
     }
 
     template<typename Callback, bool isConst, Detail::TraversalOrder order>
-    void TraverseImplImpl(node_pointer_t<isConst> node, Callback &cb) const {
-        auto lhs = [this, &cb, &node]() { if (!IsLeaf()) Left()->TraverseImpl<Callback, isConst, order>(cb); };
-        auto self = [&cb, &node]() { std::invoke(cb, const_cast<node_reference_t<isConst>>(*node)); };
-        auto rhs = [this, &cb, &node]() { if (!IsLeaf()) Right()->TraverseImpl<Callback, isConst, order>(cb); };
+    void TraverseImplImpl(Callback &cb) const {
+        auto lhs = [this, &cb]() { if (!IsLeaf()) Left()->TraverseImpl<Callback, isConst, order>(cb); };
+        auto self = [this, &cb]() { std::invoke(cb, const_cast<node_reference_t<isConst>>(*this)); };
+        auto rhs = [this, &cb]() { if (!IsLeaf()) Right()->TraverseImpl<Callback, isConst, order>(cb); };
 
         if constexpr (order == Detail::TraversalOrder::PreOrder) {
             self();
@@ -333,20 +333,15 @@ class Traversable {
     }
 };
 
-class TraversableTree {
-  public:
-    using node_t = Traversable;
-
+struct TraversableTree {
     virtual ~TraversableTree() noexcept = default;
 
-    [[nodiscard]] virtual node_t &Root() noexcept = 0;
+    [[nodiscard]] virtual Traversable &Root() noexcept = 0;
 
-    [[nodiscard]] virtual const node_t &Root() const noexcept = 0;
+    [[nodiscard]] virtual const Traversable &Root() const noexcept = 0;
 };
 
-///
-/// \tparam ShapeT
-template<typename ShapeT>
+template<typename ShapeT = void>
 class TraversableBVHNode : public Traversable, public ShapeStore {
   public:
     using shape_t = Shape::boundable_shape_t<ShapeT>;
@@ -380,19 +375,10 @@ class TraversableBVHNode : public Traversable, public ShapeStore {
     }
 };
 
-template<typename ShapeT>
-class TraversableBVHTree {
-  public:
-    using node_t = TraversableBVHNode<ShapeT>;
+template<typename ShapeT = void>
+struct TraversableBVHTree : public TraversableTree { ~TraversableBVHTree() noexcept override = default; };
 
-    virtual ~TraversableBVHTree() noexcept = default;
-
-    [[nodiscard]] virtual node_t &Root() noexcept = 0;
-
-    [[nodiscard]] virtual const node_t &Root() const noexcept = 0;
-};
-
-template<typename ShapeT>
+template<typename ShapeT = void>
 class ThreadableBVHNode : public TraversableBVHNode<ShapeT> {
   public:
     using base_t = TraversableBVHNode<ShapeT>;
@@ -400,13 +386,12 @@ class ThreadableBVHNode : public TraversableBVHNode<ShapeT> {
 
     ~ThreadableBVHNode() noexcept override = default;
 
-    void ReorderChildren(MajorAxis axis) noexcept {
-        if (base_t::IsLeaf()) return;
-        if (!base_t::Left()->IsLeaf() || !base_t::Right()->IsLeaf()) return;
+    virtual void ReorderChildren(MajorAxis axis) noexcept {
+        if (IsLeaf() || !Left()->IsLeaf() || !Right()->IsLeaf()) return;
 
         auto
-          lhs = base_t::Left()->GetCenter(),
-          rhs = base_t::Right()->GetCenter();
+          lhs = dynamic_cast<const base_t *>(Left())->GetCenter(),
+          rhs = dynamic_cast<const base_t *>(Right())->GetCenter();
 
         bool doReorder = false;
         switch (axis) {
@@ -441,19 +426,10 @@ class ThreadableBVHNode : public TraversableBVHNode<ShapeT> {
     virtual void SetID(std::size_t id) noexcept = 0;
 };
 
-template<typename ShapeT>
-class ThreadableBVHTree {
-  public:
-    using node_t = ThreadableBVHNode<ShapeT>;
+template<typename ShapeT = void>
+struct ThreadableBVHTree : public TraversableBVHTree<ShapeT> { ~ThreadableBVHTree() noexcept override = default; };
 
-    virtual ~ThreadableBVHTree() noexcept = default;
-
-    [[nodiscard]] virtual node_t &Root() noexcept = 0;
-
-    [[nodiscard]] virtual const node_t &Root() const noexcept = 0;
-};
-
-template<typename ShapeT>
+template<typename ShapeT = void>
 class IntrudableBVHNode : public ThreadableBVHNode<ShapeT> {
   public:
     using base_t = TraversableBVHNode<ShapeT>;
@@ -471,16 +447,7 @@ class IntrudableBVHNode : public ThreadableBVHNode<ShapeT> {
     virtual void UnsplitOnce() noexcept = 0;
 };
 
-template<typename ShapeT>
-class IntrudableBVHTree {
-  public:
-    using node_t = IntrudableBVHNode<ShapeT>;
-
-    virtual ~IntrudableBVHTree() noexcept = default;
-
-    [[nodiscard]] virtual node_t &Root() noexcept = 0;
-
-    [[nodiscard]] virtual const node_t &Root() const noexcept = 0;
-};
+template<typename ShapeT = void>
+struct IntrudableBVHTree : public ThreadableBVHTree<ShapeT> { ~IntrudableBVHTree() noexcept override = default; };
 
 }
