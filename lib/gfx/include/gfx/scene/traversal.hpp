@@ -387,11 +387,11 @@ class ThreadableBVHNode : public TraversableBVHNode<ShapeT> {
     ~ThreadableBVHNode() noexcept override = default;
 
     virtual void ReorderChildren(MajorAxis axis) noexcept {
-        if (IsLeaf() || !Left()->IsLeaf() || !Right()->IsLeaf()) return;
+        if (this->IsLeaf() || !this->Left()->IsLeaf() || !this->Right()->IsLeaf()) return;
 
         auto
-          lhs = dynamic_cast<const base_t *>(Left())->GetCenter(),
-          rhs = dynamic_cast<const base_t *>(Right())->GetCenter();
+          lhs = dynamic_cast<const base_t *>(this->Left())->GetCenter(),
+          rhs = dynamic_cast<const base_t *>(this->Right())->GetCenter();
 
         bool doReorder = false;
         switch (axis) {
