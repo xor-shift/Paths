@@ -30,7 +30,7 @@ class BufChan {
 
     BufChan &operator<<(T data) {
         if (!EmplaceBack(std::move(data))) {
-            throw std::runtime_error("Sent data to closed channel");
+            //throw std::runtime_error("Sent data to closed channel");
         }
 
         return *this;

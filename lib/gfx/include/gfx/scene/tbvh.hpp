@@ -1,7 +1,6 @@
 #pragma once
 
 #include "bvh.hpp"
-#include "tree.hpp"
 
 namespace Gfx::BVH::Detail {
 
@@ -33,48 +32,6 @@ class ThreadedBVH final : public ShapeStore {
     typedef Shape::boundable_shape_t <ShapeT> shape_t;
     static constexpr std::size_t npos = std::numeric_limits<std::size_t>::max();
 
-    /// This will modify the given tree in a non-destructive manner (will reorder children of nodes as needed)
-    /// \param tree
-    /*template<Concepts::BVH::ThreadableBVH Tree>
-    explicit ThreadedBVH(Tree &tree) noexcept {
-        using node_t = typename Tree::node_t;
-
-        node_t &root = tree.Root();
-
-        //shapes.reserve(tree.GetShapes(root).size());
-        extents = tree.GetExtents(root);
-        std::size_t nodeCount = 0;
-        Detail::Traverser<Tree>::template Traverse<TraversalOrder::PreOrder>(tree, [this, &tree, &nodeCount](node_t &node) {
-            node.id = nodeCount;
-            ++nodeCount;
-
-            auto nodeShapes = tree.GetShapes(node);
-
-            const std::size_t start = shapes.size();
-            std::copy(nodeShapes.begin(), nodeShapes.end(), std::back_inserter(shapes));
-            const std::size_t end = shapes.size();
-
-            nodes.push_back({{start, end}, node.extents});
-        });
-
-        for (std::size_t i = 0; i < 6; i++) {
-            Detail::Traverser<Tree>::template Traverse<TraversalOrder::PreOrder>(tree, [axis = static_cast<MajorAxis>(i)](node_t &node) {
-                node.ReorderChildren(axis);
-            });
-
-            std::vector<link_t> tLinks(nodeCount);
-            Detail::Traverser<Tree>::template Traverse<TraversalOrder::PreOrder>(tree, [&tLinks](node_t &node) {
-                std::size_t miss = GetMissLink<Tree>(node);
-                std::size_t hit;
-                if (bool isLeaf = !node.Left(); isLeaf) hit = miss;
-                else hit = node.Left()->id;
-                tLinks[node.id] = {hit, miss};
-            });
-
-            linksLists[i] = tLinks;
-        }
-    }*/
-
     explicit ThreadedBVH(ThreadableBVHTree<ShapeT> &tree) noexcept {
         using node_t = ThreadableBVHNode<ShapeT>;
         auto &root = dynamic_cast<ThreadableBVHNode<ShapeT> &>(tree.Root());
@@ -82,7 +39,7 @@ class ThreadedBVH final : public ShapeStore {
         //shapes.reserve(tree.GetShapes(root).size());
         extents = root.GetExtents();
         std::size_t nodeCount = 0;
-        root.template Traverse<TraversalOrder::PreOrder>([this, &tree, &nodeCount](auto &n) {
+        root.template Traverse<TraversalOrder::PreOrder>([this, &nodeCount](auto &n) {
             auto &node = dynamic_cast<node_t &>(n);
             node.SetID(nodeCount);
             ++nodeCount;

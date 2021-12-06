@@ -48,7 +48,7 @@ extern std::optional<BinarySTL> ReadSTL(const std::string &str) noexcept {
         return v;
     };
 
-    auto ReadVectorLE = [ReadWordLE, mappedChars](std::size_t offset) -> Maths::Vector<float, 3> {
+    auto ReadVectorLE = [ReadWordLE](std::size_t offset) -> Maths::Vector<float, 3> {
         const uint32_t
           x = ReadWordLE(offset),
           y = ReadWordLE(offset + sizeof(float)),

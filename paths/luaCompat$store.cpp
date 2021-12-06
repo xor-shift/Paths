@@ -2,28 +2,38 @@
 
 #include <gfx/stl/binary.hpp>
 #include <gfx/scene/bvh.hpp>
+#include <gfx/scene/newtree.hpp>
 #include <gfx/scene/tbvh.hpp>
 #include <gfx/scene/thinbvh.hpp>
-#include <gfx/scene/tree.hpp>
 
 namespace Utils::LUA::Detail {
 
-static std::shared_ptr<Gfx::ShapeStore> ToFatBVH(const std::shared_ptr<Gfx::ShapeStore> &ptr, std::size_t maxDepth, std::size_t minShapes) {
-    if (auto linear = std::dynamic_pointer_cast<Gfx::LinearShapeStore<>>(ptr); linear) {
-        return Gfx::BVH::LinearToFat(*linear, maxDepth, minShapes);
+template<typename ToShapeT = void, bool fat = false>
+static std::shared_ptr<Gfx::ShapeStore> TreeConstructionHelper(const std::shared_ptr<Gfx::ShapeStore> &src, std::size_t maxDepth, std::size_t minShapes) {
+    std::vector<Gfx::Shape::boundable_shape_t<ToShapeT>> retVec;
+
+    auto Attempt = [&src, &retVec]<typename Cast>() -> bool {
+        auto c = std::dynamic_pointer_cast<Cast>(src);
+        if (!c) return false;
+        retVec = Gfx::Shape::ConvertShapesVector<ToShapeT>(c->shapes);
+        return true;
+    };
+
+    if (
+      !Attempt.template operator()<Gfx::LinearShapeStore<>>() &&
+      !Attempt.template operator()<Gfx::LinearShapeStore<Gfx::Shape::Triangle>>()
+      )
+        return nullptr;
+
+    if constexpr (fat) {
+        auto res = std::make_shared<Gfx::BVH::Detail::FatBVHTree<ToShapeT>>(std::move(retVec));
+        res->Root().Split(maxDepth, minShapes);
+        return res;
+    } else {
+        auto res = std::make_shared<Gfx::BVH::Detail::BVHTree<ToShapeT>>(std::move(retVec));
+        res->Root().Split(maxDepth, minShapes);
+        return res;
     }
-
-    return nullptr;
-}
-
-static std::shared_ptr<Gfx::ShapeStore> ToFatBVHTri(const std::shared_ptr<Gfx::ShapeStore> &ptr, std::size_t maxDepth, std::size_t minShapes) {
-    if (auto linear = std::dynamic_pointer_cast<Gfx::LinearShapeStore<Gfx::Shape::Triangle>>(ptr); linear) {
-        auto vec = Gfx::BVH::ConvertShapesVector<Gfx::Shape::Triangle>(linear->shapes);
-        //return std::make_shared<Gfx::BVH::Detail::FatBVHTree<Gfx::Shape::Triangle>>(std::move(vec), maxDepth, minShapes);
-        return Gfx::BVH::LinearToFat(*linear, maxDepth, minShapes);
-    }
-
-    return nullptr;
 }
 
 static std::shared_ptr<Gfx::ShapeStore> ToThinBVH(const std::shared_ptr<Gfx::ShapeStore> &ptr) {
@@ -47,7 +57,7 @@ static std::shared_ptr<Gfx::ShapeStore> ToTBVH(const std::shared_ptr<Gfx::ShapeS
 }
 
 template<typename ConvFn, typename... Args>
-bool ToHelper(store_t &self, ConvFn &convFn, Args...args) {
+bool ToHelper(store_t &self, ConvFn &&convFn, Args...args) {
     auto conv = convFn(self.impl, args...);
     if (!conv) return false;
     self.impl = std::move(conv);
@@ -55,8 +65,8 @@ bool ToHelper(store_t &self, ConvFn &convFn, Args...args) {
 }
 
 template<typename ConvFn, typename... Args>
-store_t MakeHelper(const store_t &self, ConvFn &convFn, Args...args) {
-    auto conv = convFn(self.impl, args...);
+store_t MakeHelper(const store_t &self, ConvFn &&convFn, Args...args) {
+    auto conv = std::invoke(convFn, self.impl, args...);
     if (!conv) std::abort();
     return {std::move(conv)};
 }
@@ -96,12 +106,29 @@ extern void AddStoreToLUA(sol::state &lua) {
 
           return {ptr};
       },
-      "toFatBVH", [](store_t &self, std::size_t maxDepth = 7, std::size_t minShapes = 4) -> bool { return ToHelper(self, ToFatBVH, maxDepth, minShapes); },
-      "toFatBVHTri", [](store_t &self, std::size_t maxDepth = 7, std::size_t minShapes = 4) -> bool { return ToHelper(self, ToFatBVHTri, maxDepth, minShapes); },
+      "toBVHTree", [](store_t &self, std::size_t maxDepth, std::size_t minShapes) -> bool { return ToHelper(self, &TreeConstructionHelper<>, maxDepth, minShapes); },
+      "toBVHTreeTri", [](store_t &self, std::size_t maxDepth, std::size_t minShapes) -> bool {
+          return ToHelper(self, &TreeConstructionHelper < Gfx::Shape::Triangle, false > , maxDepth, minShapes);
+      },
+      "toFatBVHTree", [](store_t &self, std::size_t maxDepth, std::size_t minShapes) -> bool {
+          return ToHelper(self, &TreeConstructionHelper < void, true > , maxDepth, minShapes);
+      },
+      "toFatBVHTreeTri", [](store_t &self, std::size_t maxDepth, std::size_t minShapes) -> bool {
+          return ToHelper(self, &TreeConstructionHelper < Gfx::Shape::Triangle, true > , maxDepth, minShapes);
+      },
       "toThinBVH", [](store_t &self) -> bool { return ToHelper(self, ToThinBVH); },
       "toTBVH", [](store_t &self) -> bool { return ToHelper(self, ToTBVH); },
-      "makeFatBVH", [](const store_t &self, std::size_t maxDepth = 7, std::size_t minShapes = 4) -> store_t { return MakeHelper(self, ToFatBVH, maxDepth, minShapes); },
-      "makeFatBVHTri", [](const store_t &self, std::size_t maxDepth = 7, std::size_t minShapes = 4) -> store_t { return MakeHelper(self, ToFatBVHTri, maxDepth, minShapes); },
+      "makeBVHTree",
+      [](const store_t &self, std::size_t maxDepth, std::size_t minShapes) -> store_t { return MakeHelper(self, &TreeConstructionHelper<>, maxDepth, minShapes); },
+      "makeBVHTreeTri", [](const store_t &self, std::size_t maxDepth, std::size_t minShapes) -> store_t {
+          return MakeHelper(self, &TreeConstructionHelper < Gfx::Shape::Triangle > , maxDepth, minShapes);
+      },
+      "makeFatBVHTree", [](const store_t &self, std::size_t maxDepth, std::size_t minShapes) -> store_t {
+          return MakeHelper(self, &TreeConstructionHelper < void, true > , maxDepth, minShapes);
+      },
+      "makeFatBVHTreeTri", [](const store_t &self, std::size_t maxDepth, std::size_t minShapes) -> store_t {
+          return MakeHelper(self, &TreeConstructionHelper < Gfx::Shape::Triangle, true > , maxDepth, minShapes);
+      },
       "makeThinBVH", [](store_t &self) -> store_t { return MakeHelper(self, ToThinBVH); },
       "makeTBVH", [](store_t &self) -> store_t { return MakeHelper(self, ToTBVH); },
       "insertChild", [](store_t &self, store_t &other) { self.impl->InsertChild(std::move(other.impl)); },

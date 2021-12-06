@@ -1,7 +1,6 @@
 #pragma once
 
 #include "bvh.hpp"
-#include "tree.hpp"
 
 namespace Gfx::BVH::Detail {
 

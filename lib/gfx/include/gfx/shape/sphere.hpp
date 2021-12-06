@@ -40,12 +40,12 @@ class Sphere {
         return isect;
     }
 
-    const Point center;
-    const std::pair<Point, Point> extents;
+    Point center;
+    std::pair<Point, Point> extents;
 
   private:
-    const Real radius;
-    const size_t matIndex;
+    Real radius;
+    size_t matIndex;
 };
 
 }

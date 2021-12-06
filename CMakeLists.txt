@@ -9,8 +9,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(CONAN_COMPILER clang)
     set(CONAN_COMPILER_VERSION 13)
 
-    set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -mllvm -asan-use-private-alias=1")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    #set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -mllvm -asan-use-private-alias=1")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CONAN_COMPILER gcc)
     set(CONAN_COMPILER_VERSION 11.1)
@@ -20,7 +20,7 @@ endif ()
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
-find_package(OpenMP REQUIRED)
+#find_package(OpenMP REQUIRED)
 
 #set(PATHS_USE_POLLY)
 
@@ -43,7 +43,7 @@ set(PATHS_TESTS_NAME ${PROJECT_NAME}Tests)
 
 ### LIB ###
 
-add_library(${PATHS_LIB_NAME}_Maths SHARED
+add_library(${PATHS_LIB_NAME}_Maths STATIC
         lib/maths/include/maths/maths.hpp
         lib/maths/include/maths/matrix.hpp
         lib/maths/include/maths/matvec.hpp
@@ -51,6 +51,7 @@ add_library(${PATHS_LIB_NAME}_Maths SHARED
         lib/maths/include/maths/vector.hpp)
 target_include_directories(${PATHS_LIB_NAME}_Maths PUBLIC lib/maths/include)
 set_target_properties(${PATHS_LIB_NAME}_Maths PROPERTIES LINKER_LANGUAGE CXX)
+target_compile_options(${PATHS_LIB_NAME}_Maths INTERFACE -fno-exceptions)
 target_compile_options(${PATHS_LIB_NAME}_Maths INTERFACE -fno-exceptions)
 
 add_library(${PATHS_LIB_NAME}_Utils INTERFACE
@@ -64,7 +65,7 @@ add_library(${PATHS_LIB_NAME}_Utils INTERFACE
 target_include_directories(${PATHS_LIB_NAME}_Utils INTERFACE lib/utils/include)
 target_compile_options(${PATHS_LIB_NAME}_Utils INTERFACE -fno-exceptions)
 
-add_library(${PATHS_LIB_NAME} SHARED
+add_library(${PATHS_LIB_NAME} STATIC
         thirdparty/lodepng/lodepng.cpp
         thirdparty/tinyexr/tinyexr.cc
 
@@ -96,7 +97,6 @@ add_library(${PATHS_LIB_NAME} SHARED
         lib/gfx/include/gfx/scene/tbvh.hpp
         lib/gfx/include/gfx/scene/thinbvh.hpp
         lib/gfx/include/gfx/scene/traversal.hpp
-        lib/gfx/include/gfx/scene/tree.hpp
 
         lib/gfx/include/gfx/shape/shape.hpp
         lib/gfx/include/gfx/shape/shapes.hpp

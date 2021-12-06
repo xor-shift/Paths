@@ -8,6 +8,8 @@ class ShapeStore {
 
     virtual bool InsertShape(Shape::Shape) noexcept { return false; }
 
+    [[nodiscard]] virtual std::size_t TotalShapeCount() const noexcept { return 0; }
+
     [[nodiscard]] std::optional<Intersection> Intersect(Ray ray, std::size_t &boundChecks, std::size_t &isectChecks) const noexcept {
         auto best = IntersectImpl(ray, boundChecks, isectChecks);
         for (const auto &child: children)
@@ -50,6 +52,8 @@ struct LinearShapeStore final : public ShapeStore {
             });
         }
     }
+
+    [[nodiscard]] std::size_t TotalShapeCount() const noexcept override { return shapes.size(); }
 
   protected:
     [[nodiscard]] std::optional<Intersection> IntersectImpl(Ray ray, std::size_t &boundChecks, std::size_t &shapeChecks) const noexcept override {

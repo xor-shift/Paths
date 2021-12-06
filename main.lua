@@ -202,7 +202,7 @@ local function doRender(conf)
     stats.timeLoad = clock:elapsed()
 
     clock:reset()
-    local lModel = model:makeFatBVHTri(conf.treeDepth, conf.treeMinShapes)
+    local lModel = model:makeBVHTreeTri(conf.treeDepth, conf.treeMinShapes)
     stats.timeConstruct = clock:elapsed()
 
     clock:reset()

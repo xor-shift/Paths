@@ -1,9 +1,17 @@
 #pragma once
 
-#define LIBGFX_ENABLE_NORMAL_CHECKS
 //#define LIBGFX_SWRP_SINGLE_THREAD
 #define LIBGFX_PREFER_SPIN
+
 #define LIBGFX_EMBED_RAY_STATS
+
+#define LIBGFX_ENABLE_ASSERT
+#define LIBGFX_USE_CASSERT
+#define LIBGFX_ENABLE_NORMAL_CHECKS
+
+#if defined LIBGFX_USE_CASSERT and defined LIBGFX_ENABLE_ASSERT
+# include <cassert>
+#endif
 
 #include <cmath>
 #include <thread>
@@ -12,6 +20,25 @@
 #include <maths/vector.hpp>
 
 namespace Gfx {
+
+#ifdef LIBGFX_ENABLE_ASSERT
+namespace Detail {
+template<typename... Ts>
+inline void Assert(bool b, fmt::format_string<Ts...> fmt, Ts &&...args) {
+    if (!b) {
+        std::fputs(fmt::format("assertion failed: {}", fmt::format(fmt, std::forward<Ts>(args)...)).c_str(), stderr);
+#ifdef LIBGFX_USE_CASSERT
+        assert(b);
+#endif
+        std::abort();
+    }
+}
+}
+#else
+
+template<typename... Ts>
+inline void Assert(bool b, fmt::format_string<Ts...> fmt, Ts &&...args) {}
+#endif
 
 namespace ProgramConfig {
 
@@ -45,16 +72,19 @@ static constexpr bool preferredSpin = true;
 static constexpr bool preferredSpin = false;
 #endif
 
+
 }
 
-#ifdef LIBGFX_ENABLE_NORMAL_CHECKS
-
-#include <cassert>
-
-#define LIBGFX_NORMAL_CHECK(vec) assert(Maths::IsNormalized(vec))
-
+#ifdef LIBGFX_ENABLE_ASSERT
+# define LIBGFX_ASSERT(b) Gfx::Detail::Assert(b, #b)
+# define LIBGFX_ASSERT_MSG(b, ...) Gfx::Detail::Assert(b, __VA_ARGS__)
 #else
+# define LIBGFX_ASSERT(...) void(0)
+# define LIBGFX_ASSERT_MSG(...) void(0)
+#endif
 
-#define LIBGFX_NORMAL_CHECK(vec) void(0)
-
+#ifdef LIBGFX_ENABLE_NORMAL_CHECKS
+# define LIBGFX_NORMAL_CHECK(vec) LIBGFX_ASSERT_MSG(Maths::IsNormalized(vec), "vector not normalised")
+#else
+# define LIBGFX_NORMAL_CHECK(vec) void(0)
 #endif
