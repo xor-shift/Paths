@@ -5,8 +5,7 @@ namespace Gfx {
 [[nodiscard]] Color WhittedIntegrator::Sample(Ray ray, Scene &scene) const noexcept {
     std::size_t boundChecks = 0, shapeChecks = 0;
     const Color res = SampleImpl(ray, scene, 0, boundChecks, shapeChecks);
-    if constexpr (Gfx::ProgramConfig::VisualiseRayStats) return Color{boundChecks, shapeChecks};
-    else return res;
+    return res;
 }
 
 [[nodiscard]] Color WhittedIntegrator::SampleImpl(Ray ray, Scene &scene, std::size_t depth, std::size_t &boundChecks, std::size_t &shapeChecks) const noexcept {

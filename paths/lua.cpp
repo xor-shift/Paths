@@ -41,6 +41,7 @@ static sol::state NewLUAState() {
     Detail::AddMatrixToLUA(lua);
     Detail::AddCameraToLUA(lua);
     Detail::AddStoreToLUA(lua);
+    Detail::AddRayToLUA(lua);
     Detail::AddSceneToLUA(lua);
     Detail::AddImageToLUA(lua);
     Detail::AddImageViewToLUA(lua);

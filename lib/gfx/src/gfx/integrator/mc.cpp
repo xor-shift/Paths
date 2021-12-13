@@ -13,7 +13,7 @@ namespace Gfx {
 
     for (size_t depth = 0;; depth++) {
         if (depth > 7) {
-            if (Math::RandomDouble() > .8) break;
+            if (Maths::Random::UniformNormalised() > .8) break;
         }
 
         auto isection = scene.Intersect(currentRay, boundChecks, shapeChecks);
@@ -37,16 +37,15 @@ namespace Gfx {
         wO = wO + (isection->goingIn ? material.emittance : Color{}) * curA * previousCosine;
         curA = curA * material.albedo;
 
-        if (Math::RandomDouble() > material.reflectance)
-            currentRay = Ray(safeReflectionSpot, Math::D3RandomUnitVector());
+        if (Maths::Random::UniformNormalised() > material.reflectance)
+            currentRay = Ray(safeReflectionSpot, Maths::Random::UnitVector());
         else
             currentRay = Ray(safeReflectionSpot, Detail::Reflect(currentRay.direction, isection->orientedNormal));
 
         previousCosine = Maths::Dot(currentRay.direction, isection->orientedNormal);
     }
 
-    if constexpr (Gfx::ProgramConfig::VisualiseRayStats) return Color{boundChecks, shapeChecks, 0};
-    else return wO;
+    return wO;
 }
 
 }

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <concepts>
+#include <span>
+#include <stack>
 #include <type_traits>
 
 #include <gfx/common.hpp>
@@ -34,9 +36,9 @@ namespace Gfx::BVH {
 /// Requirement for Left() and Right() functions: \n
 ///  - Left() should return nullptr iff Right() returns nullptr \n
 ///  - Parent() should return nullptr iff *this is not a children of any other Traversable \n
-class Traversable {
+class BinaryTreeNode {
   public:
-    virtual ~Traversable() noexcept = default;
+    virtual ~BinaryTreeNode() noexcept = default;
 
     template<Detail::TraversalOrder order>
     void Traverse(auto &&cb) {
@@ -52,24 +54,24 @@ class Traversable {
 
     [[nodiscard]] bool IsLeaf() const noexcept { return !Left(); }
 
-    [[nodiscard]] virtual Traversable *Left() noexcept = 0;
+    [[nodiscard]] virtual BinaryTreeNode *Left() noexcept = 0;
 
-    [[nodiscard]] virtual const Traversable *Left() const noexcept = 0;
+    [[nodiscard]] virtual const BinaryTreeNode *Left() const noexcept = 0;
 
-    [[nodiscard]] virtual Traversable *Right() noexcept = 0;
+    [[nodiscard]] virtual BinaryTreeNode *Right() noexcept = 0;
 
-    [[nodiscard]] virtual const Traversable *Right() const noexcept = 0;
+    [[nodiscard]] virtual const BinaryTreeNode *Right() const noexcept = 0;
 
-    [[nodiscard]] virtual Traversable *Parent() noexcept = 0;
+    [[nodiscard]] virtual BinaryTreeNode *Parent() noexcept = 0;
 
-    [[nodiscard]] virtual const Traversable *Parent() const noexcept = 0;
+    [[nodiscard]] virtual const BinaryTreeNode *Parent() const noexcept = 0;
 
   private:
     template<bool isConst>
-    using node_pointer_t = std::conditional_t<isConst, const Traversable *, Traversable *>;
+    using node_pointer_t = std::conditional_t<isConst, const BinaryTreeNode *, BinaryTreeNode *>;
 
     template<bool isConst>
-    using node_reference_t = std::conditional_t<isConst, const Traversable &, Traversable &>;
+    using node_reference_t = std::conditional_t<isConst, const BinaryTreeNode &, BinaryTreeNode &>;
 
     template<typename Callback, bool isConst, Detail::TraversalOrder order>
     void TraverseImpl(Callback &cb) const {
@@ -123,16 +125,16 @@ class Traversable {
     }
 };
 
-struct TraversableTree {
-    virtual ~TraversableTree() noexcept = default;
+struct BinaryTree {
+    virtual ~BinaryTree() noexcept = default;
 
-    [[nodiscard]] virtual Traversable &Root() noexcept = 0;
+    [[nodiscard]] virtual BinaryTreeNode &Root() noexcept = 0;
 
-    [[nodiscard]] virtual const Traversable &Root() const noexcept = 0;
+    [[nodiscard]] virtual const BinaryTreeNode &Root() const noexcept = 0;
 };
 
 template<typename ShapeT = void>
-class TraversableBVHNode : public Traversable, public ShapeStore {
+class TraversableBVHNode : public BinaryTreeNode, public ShapeStore {
   public:
     using shape_t = Shape::boundable_shape_t<ShapeT>;
 
@@ -148,7 +150,7 @@ class TraversableBVHNode : public Traversable, public ShapeStore {
     }
 
     [[nodiscard]] std::optional<Intersection> IntersectImpl(Ray ray, std::size_t &boundChecks, std::size_t &shapeChecks) const noexcept override {
-        if constexpr (Gfx::ProgramConfig::EmbedRayStats) ++boundChecks;
+        if constexpr (Gfx::ProgramConfig::embedRayStats) ++boundChecks;
 
         if (!Gfx::Shape::AABox::EIntersects(GetExtents(), ray)) return std::nullopt;
 
@@ -159,7 +161,7 @@ class TraversableBVHNode : public Traversable, public ShapeStore {
             return best;
         } else {
             const auto s = GetShapes();
-            if constexpr (Gfx::ProgramConfig::EmbedRayStats) shapeChecks += s.size();
+            if constexpr (Gfx::ProgramConfig::embedRayStats) shapeChecks += s.size();
             return Shape::IntersectLinear(ray, s.begin(), s.end());
         }
     }
@@ -202,7 +204,7 @@ class TraversableBVHNode : public Traversable, public ShapeStore {
 };
 
 template<typename ShapeT = void>
-class TraversableBVHTree : public TraversableTree, public ShapeStore {
+class TraversableBVHTree : public BinaryTree, public ShapeStore {
   public:
     ~TraversableBVHTree() noexcept override = default;
 
@@ -278,7 +280,6 @@ class IntrudableBVHNode : public ThreadableBVHNode<ShapeT> {
         return SplitImpl(maxDepth, minShapes, 0);
     }
 
-  protected:
     /// This function should only be valid when this->IsLeaf()
     /// \param rhsStartIndex The index to GetShapes() with which the right hand side node should begin with
     virtual void SplitAt(std::size_t rhsStartIndex) noexcept = 0;
@@ -287,20 +288,66 @@ class IntrudableBVHNode : public ThreadableBVHNode<ShapeT> {
     virtual void UnsplitOnce() noexcept = 0;
 
   private:
-    bool SplitImpl(std::size_t maxDepth, std::size_t minShapes, std::size_t depth) {
-        this->CalculateExtents();
-        auto shapes = this->GetShapes();
+    enum class PartitionType {
+        Middle, Median, Average
+    };
+
+    template<PartitionType partitionType>
+    struct Partitioner { static std::size_t Partition(std::size_t axis) { static_assert(partitionType != partitionType); }};
+
+    template<>
+    struct Partitioner<PartitionType::Median> {
+        IntrudableBVHNode &self;
+
+        std::size_t Partition(std::size_t axis) {
+            auto shapes = self.GetShapes();
+
+            std::sort(shapes.begin(), shapes.end(), [axis](const auto &lhs, const auto &rhs) -> bool {
+                auto lhsCenter = Shape::Apply(lhs, [](const auto &s) { return s.center; });
+                auto rhsCenter = Shape::Apply(rhs, [](const auto &s) { return s.center; });
+                return lhsCenter[axis] < rhsCenter[axis];
+            });
+
+            return shapes.size() / 2;
+        }
+    };
+
+    template<>
+    struct Partitioner<PartitionType::Middle> {
+        IntrudableBVHNode &self;
+
+        std::size_t Partition(std::size_t axis) {
+            auto shapes = self.GetShapes();
+            auto extents = self.GetExtents();
+
+            std::pair<Point, Point> rhsExtents = extents;
+            const auto halfExtent = (extents.second[axis] - extents.first[axis]) / static_cast<Real>(2);
+            rhsExtents.first[axis] += halfExtent;
+
+            auto rhsCount = std::distance(
+              std::partition(shapes.begin(), shapes.end(), [&rhsExtents](const shape_t &s) -> bool {
+                  return Shape::InBounds(rhsExtents, Shape::Apply(s, [](const auto &s) {
+                      return s.center;
+                  }));
+              }),
+              shapes.end());
+
+            return shapes.size() - rhsCount;
+        }
+    };
+
+    inline std::size_t SelectAxisMajor() { return this->GetMajorAxes()[0]; }
+
+    inline std::size_t SelectAxisRoundRobin(std::size_t depth) { return depth % 3; }
+
+    /*std::pair<std::size_t, bool> PartitionMajorAxis(std::size_t minShapes) {
         auto extents = this->GetExtents();
-
-        if (depth >= maxDepth) return false;
-        if (shapes.size() <= minShapes) return false;
-
+        auto shapes = this->GetShapes();
         const auto splitOrder = this->GetMajorAxes();
 
         for (auto axis: splitOrder) {
-            std::pair<Point, Point> lhsExtents = extents, rhsExtents = extents;
+            std::pair<Point, Point> rhsExtents = extents;
             const auto halfExtent = (extents.second[axis] - extents.first[axis]) / static_cast<Real>(2);
-            lhsExtents.second[axis] -= halfExtent;
             rhsExtents.first[axis] += halfExtent;
 
             auto rhsCount = std::distance(
@@ -316,7 +363,30 @@ class IntrudableBVHNode : public ThreadableBVHNode<ShapeT> {
                 static_cast<std::size_t>(shapes.size() - rhsCount) < minShapes)
                 continue;
 
-            this->SplitAt(shapes.size() - rhsCount);
+            return {shapes.size() - rhsCount, true};
+        }
+
+        return {0, false};
+    }*/
+
+    bool SplitImpl(std::size_t maxDepth, std::size_t minShapes, std::size_t depth) {
+        this->CalculateExtents();
+        auto shapes = this->GetShapes();
+
+        if (depth >= maxDepth) return false;
+        if (shapes.size() <= minShapes) return false;
+
+        auto majorAxes = this->GetMajorAxes();
+        auto partitioner = Partitioner<PartitionType::Middle>{*this};
+
+        for (auto axis: majorAxes) {
+            auto splitPoint = partitioner.Partition(axis);
+
+            if (static_cast<std::size_t>(splitPoint) < minShapes ||
+                static_cast<std::size_t>(shapes.size() - splitPoint) < minShapes)
+                continue;
+
+            this->SplitAt(splitPoint);
 
             dynamic_cast<IntrudableBVHNode *>(this->Left())->SplitImpl(maxDepth, minShapes, depth + 1);
             dynamic_cast<IntrudableBVHNode *>(this->Right())->SplitImpl(maxDepth, minShapes, depth + 1);

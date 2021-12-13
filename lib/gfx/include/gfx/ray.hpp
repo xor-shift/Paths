@@ -121,20 +121,9 @@ static inline std::pair<Real, Real> BlinnPhongCoefficients(Point light, Point in
 static_assert(std::is_trivially_copyable_v<Ray>);
 static_assert(std::is_trivially_destructible_v<Ray>);
 
-#ifdef LIBGFX_EMBED_RAY_STATS
-
-struct RayStats {
-    std::size_t totalIntersectionChecks{0};
-    std::size_t boundIntersectionChecks{0};
-};
-
-#endif
-
 struct Intersection {
     constexpr Intersection(const Ray &ray, size_t matIndex, Real distance, Point normal = {0, 0, 0}, Maths::Vector<Real, 2> uv = {0, 0}
-#ifdef LIBGFX_EMBED_RAY_STATS
-      , RayStats stats = {}
-#endif
+
     )
       : matIndex(matIndex)
         , distance(distance)
@@ -142,9 +131,6 @@ struct Intersection {
         , normal(normal)
         , goingIn(Maths::Dot(normal, ray.direction) < 0)
         , orientedNormal(goingIn ? normal : -normal), uv(uv)
-#ifdef LIBGFX_EMBED_RAY_STATS
-    , stats(stats)
-#endif
     {}
 
     std::size_t matIndex{};
@@ -157,10 +143,6 @@ struct Intersection {
     Point orientedNormal{};
 
     Maths::Vector<Real, 2> uv{0, 0};
-
-#ifdef LIBGFX_EMBED_RAY_STATS
-    RayStats stats;
-#endif
 
     static constexpr bool Replace(std::optional<Intersection> &old, std::optional<Intersection> &&with) noexcept {
         if (with && (!old || ((with->distance < old->distance) && with->distance > 0))) {

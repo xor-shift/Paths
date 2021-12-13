@@ -40,6 +40,7 @@ endif ()
 set(PATHS_LIB_NAME Lib${PROJECT_NAME})
 set(PATHS_EXEC_NAME ${PROJECT_NAME})
 set(PATHS_TESTS_NAME ${PROJECT_NAME}Tests)
+set(PATHS_BENCH_NAME ${PROJECT_NAME}Bench)
 
 ### LIB ###
 
@@ -90,8 +91,7 @@ add_library(${PATHS_LIB_NAME} STATIC
         lib/gfx/src/gfx/integrator/stat.cpp
         lib/gfx/src/gfx/integrator/whitted.cpp
 
-        lib/gfx/include/gfx/scene/bvh.hpp
-        lib/gfx/include/gfx/scene/newtree.hpp
+        lib/gfx/include/gfx/scene/tree.hpp
         lib/gfx/include/gfx/scene/scene.hpp
         lib/gfx/include/gfx/scene/store.hpp
         lib/gfx/include/gfx/scene/tbvh.hpp
@@ -131,13 +131,24 @@ add_subdirectory(thirdparty/googletest)
 
 add_executable(${PATHS_TESTS_NAME}
         tests/test_test.cpp
-        tests/test_maths.cpp)
+        tests/test_maths.cpp
+        tests/test_prng.cpp)
 target_include_directories(${PATHS_TESTS_NAME} PUBLIC thirdparty/googletest/googletest/include)
 target_link_libraries(${PATHS_TESTS_NAME} ${PATHS_LIB_NAME} gtest gtest_main)
 
 add_executable(${PATHS_TESTS_NAME}_distrib
         tests/distribTest.cpp)
 target_link_libraries(${PATHS_TESTS_NAME}_distrib ${PATHS_LIB_NAME})
+
+
+### BENCHMARKS ###
+
+add_subdirectory(thirdparty/benchmark)
+
+add_executable(${PATHS_BENCH_NAME}
+        benchmarks/rand.cpp)
+target_include_directories(${PATHS_BENCH_NAME} PUBLIC thirdparty/benchmark/include)
+target_link_libraries(${PATHS_BENCH_NAME} ${PATHS_LIB_NAME} benchmark)
 
 ### MAIN ###
 
@@ -152,12 +163,12 @@ target_sources(${PATHS_EXEC_NAME} PUBLIC
 
         paths/luaCompat.hpp
         )
-foreach(compatFile camera image integrator matrix scene store vector)
+foreach (compatFile camera image integrator matrix scene store vector ray)
     set(compatFile paths/luaCompat\$${compatFile}.cpp)
     set_source_files_properties(${compatFile} PROPERTIES COMPILE_FLAGS -fexceptions)
     #set_source_files_properties(${compatFile} PROPERTIES COMPILE_FLAGS -Wno-nonnull)
     target_sources(${PATHS_EXEC_NAME} PUBLIC ${compatFile})
-endforeach()
+endforeach ()
 set_source_files_properties(paths/lua.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
 conan_target_link_libraries(${PATHS_EXEC_NAME})
 target_link_libraries(${PATHS_EXEC_NAME} ${PATHS_LIB_NAME}_Maths ${PATHS_LIB_NAME})

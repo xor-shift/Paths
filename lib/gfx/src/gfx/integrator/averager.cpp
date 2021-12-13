@@ -24,7 +24,7 @@ void IntegratorAverager::SetCamera(Camera c) noexcept {
 void IntegratorAverager::Render() noexcept {
     integrator->Render();
 
-    summerPool.SplitWork(imageSum.height, preferredThreadCount, [this](size_t start, size_t end) {
+    summerPool.SplitWork(imageSum.height, ProgramConfig::preferredThreadCount, [this](size_t start, size_t end) {
         return WorkItem{
           .self = *this,
           .start = start,
@@ -37,7 +37,7 @@ void IntegratorAverager::Render() noexcept {
 }
 
 [[nodiscard]] Image::ImageView IntegratorAverager::GetImage() noexcept {
-    averagerPool.SplitWork(imageAverage.height, preferredThreadCount, [this](size_t start, size_t end) {
+    averagerPool.SplitWork(imageAverage.height, ProgramConfig::preferredThreadCount, [this](size_t start, size_t end) {
         return WorkItem{
           .self = *this,
           .start = start,
@@ -75,8 +75,8 @@ void IntegratorAverager::SumWorkerFn(IntegratorAverager::WorkItem &&item) noexce
 }
 
 void IntegratorAverager::StartThreads() {
-    summerThread = std::thread([this] { summerPool.Work(preferredThreadCount); });
-    averagerThread = std::thread([this] { averagerPool.Work(preferredThreadCount); });
+    summerThread = std::thread([this] { summerPool.Work(ProgramConfig::preferredThreadCount); });
+    averagerThread = std::thread([this] { averagerPool.Work(ProgramConfig::preferredThreadCount); });
 }
 
 }

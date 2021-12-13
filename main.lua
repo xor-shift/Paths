@@ -65,7 +65,7 @@ function Configuration:getOutFilename()
     if self.outFilename ~= "" then
         return self.outFilename
     else
-        return self.integrator .. "_" ..
+        return "out/" .. self.integrator .. "_" ..
                 self.flatteningMethod .. "_" ..
                 self.treeDepth .. "," ..
                 self.treeMinShapes .. "_" ..
@@ -108,7 +108,7 @@ local function doLog(conf, stats)
     )
 end
 
-local modelToLoad = 0
+local modelToLoad = 1
 local model
 if modelToLoad == 0 then
     model = store.newLinearTriFromSTL(
@@ -130,7 +130,7 @@ local function doRender(conf)
     local function getLightXYs(angles, radius, z)
         local arr = {}
 
-        for k, v in pairs(angles) do
+        for _, v in pairs(angles) do
             arr[#arr + 1] = point.new({ radius * math.cos(v * (math.pi / 180.0)),
                                         radius * math.sin(v * (math.pi / 180.0)),
                                         z })
@@ -189,12 +189,6 @@ local function doRender(conf)
 
     local lightXYs = getLightXYs({ 120, 90, 60, 30 }, 6, -1)
 
-    local cam = camera.new()
-    cam.position = origin + cameraOffset
-    cam.fovHint = 100
-    cam.resolution = conf.resolution
-    cam:setLookAt(origin + modelOffset + point.new({ 0, 2, 0 }))
-
     local scene0 = scene.new()
     addMaterialsToScene(scene0)
 
@@ -210,20 +204,45 @@ local function doRender(conf)
         lModel:toThinBVH()
     elseif conf.flatteningMethod == 2 then
         lModel:toTBVH()
+    elseif conf.flatteningMethod == 3 then
+        lModel:toMTBVH()
     end
     stats.timeFlatten = clock:elapsed()
 
-    local linearStore = store.newLinear()
+    local unboundableStore = store.newLinear()
     --linearStore:insertPlane(scene0:resolveMaterial("mirror"), origin + mirrorOffset, point.new({ 0, 0, -1 }))
-    linearStore:insertPlane(scene0:resolveMaterial("gray"), origin + floorOffset, point.new({ 0, 1, 0 }))
+    unboundableStore:insertPlane(scene0:resolveMaterial("gray"), origin + floorOffset, point.new({ 0, 1, 0 }))
 
-    linearStore:insertDisc(scene0:resolveMaterial("red light"), origin + lightXYs[1], modelOffset - lightXYs[1], 1)
-    linearStore:insertDisc(scene0:resolveMaterial("green light"), origin + lightXYs[2], modelOffset - lightXYs[2], 1)
-    linearStore:insertDisc(scene0:resolveMaterial("blue light"), origin + lightXYs[3], modelOffset - lightXYs[3], 1)
+    local boundableStore = store.newLinear()
+
+    boundableStore:insertDisc(scene0:resolveMaterial("red light"), origin + lightXYs[1], modelOffset - lightXYs[1], 1)
+    boundableStore:insertDisc(scene0:resolveMaterial("green light"), origin + lightXYs[2], modelOffset - lightXYs[2], 1)
+    boundableStore:insertDisc(scene0:resolveMaterial("blue light"), origin + lightXYs[3], modelOffset - lightXYs[3], 1)
     --linearStore:insertDisc(scene0:resolveMaterial("bright light"), origin + lightXYs[4], teapotOffset - lightXYs[4], 1)
 
-    scene0:getStoreReference():insertChild(linearStore)
+    boundableStore:insertSphere(scene0:resolveMaterial("gray"), point.new({ modelOffset[1] - 3, modelOffset[2] + 1.5, modelOffset[3] + 3 }), 1)
+    boundableStore:insertSphere(scene0:resolveMaterial("gray"), point.new({ modelOffset[1] + 3, modelOffset[2] + 1.5, modelOffset[3] - 3 }), 1)
+
+    boundableStore:toBVHTree(4, 1);
+    boundableStore:toThinBVH();
+
+    scene0:getStoreReference():insertChild(unboundableStore)
+    scene0:getStoreReference():insertChild(boundableStore)
     scene0:getStoreReference():insertChild(lModel)
+
+    local focalIntersection = scene0:castRay(ray.new(origin + cameraOffset, (cameraOffset - modelOffset):normalized()));
+    local focalDistance = (cameraOffset - modelOffset):magnitude()
+    if focalIntersection ~= nil then
+        focalDistance = focalDistance:distance();
+    end
+
+    local cam = camera.new()
+    cam.position = origin + cameraOffset
+    cam.resolution = conf.resolution
+    cam.fovHint = 50
+    cam.focalDistance = focalDistance
+    cam.apertureDiameter = 0.65
+    cam:setLookAt(origin + modelOffset + point.new({ 0, 2, 0 }))
 
     local integ = integrator.newSamplerWrapper(conf.integrator)
     integ:wrapInAverager()
@@ -256,14 +275,26 @@ local function doRender(conf)
 end
 
 local conf = Configuration:new()
-conf.samplesToTake = 64
-conf.resolution = dim2d.new({ 640, 360 })
-conf.normaliseOutput = true
 
 local benchmark = false
 
+conf.treeMinShapes = 8
+conf.samplesToTake = 64
+conf.resolution = dim2d.new({ 3840, 2160 })
+
 if benchmark then
-    for method = 0, 2, 1 do
+    conf.integrator = "stat"
+    --conf.flatteningMethod = 2
+    --conf.treeDepth = 22
+    conf.treeMinShapes = 8
+    conf.samplesToTake = 64
+    conf.printProgress = true
+    conf.resolution = dim2d.new({ 1920, 1080 })
+    conf.outputFile = true
+    conf.normaliseOutput = true
+    conf.outFilename = ""
+
+    for method = 0, 3, 1 do
         conf.flatteningMethod = method
         for depth = 12, 22, 1 do
             conf.treeDepth = depth
@@ -273,14 +304,17 @@ if benchmark then
         end
     end
 else
-    conf.resolution = dim2d.new({ 640, 360 })
-    conf.normaliseOutput = false
     conf.integrator = "pt"
-    conf.flatteningMethod = 1
-    conf.treeDepth = 20
+    conf.flatteningMethod = 2
+    conf.treeDepth = 22
     conf.treeMinShapes = 8
-    conf.outFilename = "test.exr"
+    conf.samplesToTake = 256
+    conf.printProgress = true
+    conf.resolution = dim2d.new({ 3840, 2160 }) / 4
     conf.outputFile = true
+    conf.normaliseOutput = false
+    conf.outFilename = "test.exr"
+
     local stats = doRender(conf)
     doLog(conf, stats)
 end

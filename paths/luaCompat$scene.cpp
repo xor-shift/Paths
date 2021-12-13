@@ -24,7 +24,11 @@ extern void AddSceneToLUA(sol::state &lua) {
           return 0;
       },
       "resolveMaterial", [](const scene_t &self, const std::string &material) { return self.impl->ResolveMaterial(material); },
-      "clear", [](scene_t &self) { self.impl = nullptr; }
+      "clear", [](scene_t &self) { self.impl = nullptr; },
+      "castRay", [](const scene_t &self, Gfx::Ray ray) -> std::optional<Gfx::Intersection> {
+          std::size_t _;
+          return self.impl->Intersect(ray, _, _);
+      }
     );
 }
 

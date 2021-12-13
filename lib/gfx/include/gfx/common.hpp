@@ -1,13 +1,12 @@
 #pragma once
 
 //#define LIBGFX_SWRP_SINGLE_THREAD
-#define LIBGFX_PREFER_SPIN
-
-#define LIBGFX_EMBED_RAY_STATS
-
-#define LIBGFX_ENABLE_ASSERT
 #define LIBGFX_USE_CASSERT
+
+#ifndef NDEBUG
+#define LIBGFX_ENABLE_ASSERT
 #define LIBGFX_ENABLE_NORMAL_CHECKS
+#endif
 
 #if defined LIBGFX_USE_CASSERT and defined LIBGFX_ENABLE_ASSERT
 # include <cassert>
@@ -35,15 +34,18 @@ inline void Assert(bool b, fmt::format_string<Ts...> fmt, Ts &&...args) {
 }
 }
 #else
-
 template<typename... Ts>
 inline void Assert(bool b, fmt::format_string<Ts...> fmt, Ts &&...args) {}
 #endif
 
 namespace ProgramConfig {
 
-static constexpr bool EmbedRayStats = true;
-static constexpr bool VisualiseRayStats = false;
+static constexpr const bool singleThread = false;
+static constexpr const bool defaultSpin = true;
+
+static constexpr const bool embedRayStats = true;
+
+static const size_t preferredThreadCount = singleThread ? 1 : std::thread::hardware_concurrency();
 
 }
 
@@ -59,19 +61,6 @@ static constexpr Real sensibleEps = static_cast<Real>(1e-7);
 typedef Maths::Vector<Real, 3> Point;
 static constexpr Point epsilonPoint({sensibleEps, sensibleEps, sensibleEps});
 typedef Maths::Matrix<Real, 3, 3> Matrix;
-
-#ifdef LIBGFX_SWRP_SINGLE_THREAD
-static const size_t preferredThreadCount = 1;
-#else
-static const size_t preferredThreadCount = std::thread::hardware_concurrency();
-#endif
-
-#ifdef LIBGFX_PREFER_SPIN
-static constexpr bool preferredSpin = true;
-#else
-static constexpr bool preferredSpin = false;
-#endif
-
 
 }
 

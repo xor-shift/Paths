@@ -57,7 +57,7 @@ struct LinearShapeStore final : public ShapeStore {
 
   protected:
     [[nodiscard]] std::optional<Intersection> IntersectImpl(Ray ray, std::size_t &boundChecks, std::size_t &shapeChecks) const noexcept override {
-        if constexpr (Gfx::ProgramConfig::EmbedRayStats) {
+        if constexpr (Gfx::ProgramConfig::embedRayStats) {
             shapeChecks += shapes.size();
         }
         return Shape::IntersectLinear(ray, shapes.cbegin(), shapes.cend());

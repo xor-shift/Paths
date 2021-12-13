@@ -30,9 +30,11 @@ struct IntegratorAverager final : public Integrator {
     static void SumWorkerFn(WorkItem &&item) noexcept;
 
     std::thread summerThread;
-    Utils::WorkerPoolWG<decltype(&IntegratorAverager::AvgWorkerFn), WorkItem, preferredSpin> summerPool{&IntegratorAverager::SumWorkerFn, preferredThreadCount};
+    Utils::WorkerPoolWG<decltype(&IntegratorAverager::AvgWorkerFn), WorkItem, ProgramConfig::defaultSpin> summerPool{&IntegratorAverager::SumWorkerFn,
+                                                                                                                     ProgramConfig::preferredThreadCount};
     std::thread averagerThread;
-    Utils::WorkerPoolWG<decltype(&IntegratorAverager::AvgWorkerFn), WorkItem, preferredSpin> averagerPool{&IntegratorAverager::AvgWorkerFn, preferredThreadCount};
+    Utils::WorkerPoolWG<decltype(&IntegratorAverager::AvgWorkerFn), WorkItem, ProgramConfig::defaultSpin> averagerPool{&IntegratorAverager::AvgWorkerFn,
+                                                                                                                       ProgramConfig::preferredThreadCount};
 
     void StartThreads();
 };

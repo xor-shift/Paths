@@ -17,17 +17,17 @@ class BVHNode final : public IntrudableBVHNode<ShapeT> {
       : shapesImpl(std::move(shapes))
         , shapeExtents(sExtents) { if (!this->GetShapes().empty()) this->CalculateExtents(); }
 
-    [[nodiscard]] Traversable *Left() noexcept override { return children[0].get(); }
+    [[nodiscard]] BinaryTreeNode *Left() noexcept override { return children[0].get(); }
 
-    [[nodiscard]] const Traversable *Left() const noexcept override { return children[0].get(); }
+    [[nodiscard]] const BinaryTreeNode *Left() const noexcept override { return children[0].get(); }
 
-    [[nodiscard]] Traversable *Right() noexcept override { return children[1].get(); }
+    [[nodiscard]] BinaryTreeNode *Right() noexcept override { return children[1].get(); }
 
-    [[nodiscard]] const Traversable *Right() const noexcept override { return children[1].get(); }
+    [[nodiscard]] const BinaryTreeNode *Right() const noexcept override { return children[1].get(); }
 
-    [[nodiscard]] Traversable *Parent() noexcept override { return parent; }
+    [[nodiscard]] BinaryTreeNode *Parent() noexcept override { return parent; }
 
-    [[nodiscard]] const Traversable *Parent() const noexcept override { return parent; }
+    [[nodiscard]] const BinaryTreeNode *Parent() const noexcept override { return parent; }
 
     void SwapChildren() noexcept override { children[0].swap(children[1]); }
 
@@ -49,7 +49,6 @@ class BVHNode final : public IntrudableBVHNode<ShapeT> {
 
     [[nodiscard]] std::size_t TotalShapeCount() const noexcept override { return totalShapeCount; }
 
-  protected:
     void SplitAt(std::size_t rhsStartIndex) noexcept override {
         auto shapes = this->GetShapes();
         rhsStartIndex = std::min(rhsStartIndex, shapes.size());
@@ -76,6 +75,7 @@ class BVHNode final : public IntrudableBVHNode<ShapeT> {
         children = {nullptr, nullptr};
     }
 
+  protected:
     void SetExtents(std::pair<Point, Point> e) noexcept override { extents = e; }
 
     std::shared_ptr<std::vector<shape_t>> shapesImpl{nullptr};

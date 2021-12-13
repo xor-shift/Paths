@@ -42,4 +42,31 @@ Camera &Camera::SetLookAt(Point p) {
     return *this;
 }
 
+Ray Camera::MakeRay(std::size_t x, std::size_t y) {
+    const auto nudge = Maths::Random::UnitDisk();
+    const Point baseVector{(static_cast<Real>(x) + nudge[0] - .5) * resolutionScale - scaledResolution[0] / 2.,
+                           (-static_cast<Real>(y) + nudge[1] - .5) * resolutionScale + scaledResolution[1] / 2.,
+                           focalDistance};
+
+    if (apertureDiameter > 0.001) {
+        const auto apertureOffset = Maths::Random::UnitDisk() * apertureDiameter;
+        const Point apertureOffsetPoint{apertureOffset[0], apertureOffset[1]};
+
+        return {position + rayTransform * apertureOffsetPoint, Maths::Normalized(rayTransform * baseVector - apertureOffsetPoint)};
+    } else {
+        return {position, Maths::Normalized(rayTransform * baseVector)};
+    }
+}
+
+void Camera::Prepare() {
+    const auto w = static_cast<Real>(resolution[0]) / 2.;
+    const auto varphi = fovHint / 2.;
+
+    viewingPlaneDistance = w / std::tan(varphi / 180. * M_PI);
+
+    resolutionScale = focalDistance / viewingPlaneDistance;
+    scaledResolution = resolution;
+    scaledResolution *= resolutionScale;
+}
+
 }

@@ -32,21 +32,12 @@ void PrintHistograms() {
 
     DoubleHistogram hist0(-2, 2, 32);
     for (size_t i = 0; i < nDist; i++) {
-        auto asd = Math::SampleNormalBM();
-        hist0.Push(asd[0]);
-        hist0.Push(asd[1]);
-    }
-
-    DoubleHistogram hist1(-2, 2, 32);
-    for (size_t i = 0; i < nDist; i++) {
-        auto asd = Math::SampleNormalMP();
+        auto asd = Maths::Random::NormalPair();
         hist0.Push(asd[0]);
         hist0.Push(asd[1]);
     }
 
     for (const auto &v : hist0.hist) fmt::print("{},", v);
-    fmt::print("\n");
-    for (const auto &v : hist1.hist) fmt::print("{},", v);
     fmt::print("\n");
 }
 
@@ -79,9 +70,8 @@ int main() {
 
     std::ofstream ofs("dists", std::fstream::out);
 
-    Sample2(nUniform, ofs, &Math::SampleSquareUniform);
-    Sample2(nNormal, ofs, &Math::SampleSNDNormalBM);
-    Sample2(nNormal, ofs, &Math::SampleSNDNormalMP);
+    Sample2(nUniform, ofs, &Maths::Random::UnitSquare);
+    Sample2(nNormal, ofs, &Maths::Random::NormalPair);
 
     for (size_t i = 0; i < nSphere; i++) { //this is heavy to display in MPL
         auto samp = Math::D3RandomUnitVector();
@@ -91,9 +81,8 @@ int main() {
 
     ofs.close();
 
-    Bench2("SampleSquareUniform", 1024 * 1024, &Math::SampleSquareUniform);
-    Bench2("SampleSNDNormalBM", 1024 * 1024, &Math::SampleSNDNormalBM);
-    Bench2("SampleSNDNormalMP", 1024 * 1024, &Math::SampleSNDNormalMP);
+    Bench2("UnitSquare", 1024 * 1024, &Maths::Random::UnitSquare);
+    Bench2("NormalPair", 1024 * 1024, &Maths::Random::NormalPair);
 
     return 0;
 }

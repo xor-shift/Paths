@@ -2,6 +2,8 @@
 
 #include <gfx/common.hpp>
 #include <gfx/shape/triangle.hpp>
+#include <maths/matrix.hpp>
+#include <maths/matvec.hpp>
 
 namespace Gfx::STL {
 

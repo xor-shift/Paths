@@ -25,4 +25,15 @@ extern void AddImageViewToLUA(sol::state &lua);
 
 extern void AddImageToLUA(sol::state &lua);
 
+extern void AddRayToLUA(sol::state &lua);
+
 }
+
+#define LuaProperty(T, name) \
+#name, sol::property( \
+    [](T &self, decltype(self.name) v) { \
+        self.name = v; \
+    }, [](const T &self) -> decltype(self.name) { \
+        return self.name; \
+    } \
+) \

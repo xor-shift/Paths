@@ -1,160 +1,175 @@
 #pragma once
 
-#include <concepts>
 #include <random>
-#include <thread>
 
 #include "vector.hpp"
-#include "matrix.hpp"
-#include "matvec.hpp"
 
-namespace Math {
+namespace Maths::Random::Conv {
 
-namespace Concepts {
+namespace Detail {
 
-template<typename T>
-concept ODHPSampler = requires(T c) {{ c() } -> std::same_as<double>; };
+//marsaglia polar method
+static inline Maths::Vector<double, 2> ToNormalMP(Maths::Vector<double, 2> sample) {
+    double x, y, s;
 
-template<typename T>
-concept V2HPSampler = requires(T c) {{ c() } -> std::same_as<Maths::Vector<double, 2>>; };
+    do {
+        x = sample[0] * 2. - 1.;
+        y = sample[1] * 2. - 1.;
+        s = x * x + y * y;
+    } while (s >= 1. || s == 0.);
 
-template<typename T>
-concept V3HPSampler = requires(T c) {{ c() } -> std::same_as<Maths::Vector<double, 3>>; };
-
+    s = std::sqrt(-2. * log(s) / s);
+    return {x * s, y * s};
 }
 
-/**
- * Similar to C's erand48
- * @return Uniformly distributed doubles in the range [0, 1)
- */
-inline double RandomDouble() noexcept {
-    [[maybe_unused]] auto ImplErand = [] {
-        static constexpr uint64_t randMult = 0x0005deece66dll; //posix
-        static constexpr uint64_t randAdd = 0xbll; //posix
-
-        thread_local static unsigned short Xi[3] = {
-          0x330E /* posix */,
-          0xFDF3 /* asked wolframalpha to give me a random number */,
-          static_cast<uint16_t>(std::hash<std::thread::id>()(std::this_thread::get_id()))}; /* noise */
-
-        auto Advance = [&] {
-            uint64_t t0, t1;
-            t0 = static_cast<uint64_t>(Xi[2]) << 32 |
-                 static_cast<uint64_t>(Xi[1]) << 16 |
-                 static_cast<uint64_t>(Xi[0]);
-
-            t1 = t0 * randMult + randAdd;
-
-            Xi[0] = t1 & 0xFFFF;
-            Xi[1] = (t1 >> 16) & 0xFFFF;
-            Xi[2] = (t1 >> 32) & 0xFFFF;
-
-            return t1;
-        };
-
-        return std::ldexp(static_cast<double>(Advance() & 0xFFFF'FFFF'FFFF), -48);
-    };
-
-    return ImplErand();
-}
-
-/**
- *
- * @return RandomDouble() + epsilon, resulting in a uniform distribution in the range (0, 1]
- */
-inline double RandomDoubleEps() noexcept {
-    return RandomDouble() + std::numeric_limits<double>::epsilon();
-}
-
-/**
- * Creates uniformly distributed samples in the range 0 <= x < 1, 0 <= y < 1
- * @return
- */
-inline Maths::Vector<double, 2> SampleSquareUniform() noexcept { return {RandomDouble(), RandomDouble()}; }
-
-/**
- * Creates two distinct normally distributed numbers
- * Uses Box-Muller Transform
- * @return The samples
- */
-inline Maths::Vector<double, 2> SampleNormalBM(double mu = 0, double sigma = 1) noexcept {
-    const auto U0 = RandomDoubleEps(), U1 = RandomDoubleEps();
+//box-muller transform
+static inline Maths::Vector<double, 2> ToNormalBM(Maths::Vector<double, 2> sample) {
+    const auto U0 = sample[0], U1 = sample[1];
 
     const auto inner = M_PI * 2. * U1;
     const auto
       rhs0 = std::cos(inner),
       rhs1 = std::sin(inner);
-    const auto lhs = sigma * std::sqrt(-2. * std::log(U0));
+    const auto lhs = std::sqrt(-2. * std::log(U0));
 
-    return {lhs * rhs0 + mu, lhs * rhs1 + mu};
+    return {lhs * rhs0, lhs * rhs1};
 }
 
-inline Maths::Vector<double, 2> SampleSNDNormalBM() noexcept { return SampleNormalBM(); }
+}
 
-/**
- * Creates a normally distributed number
- * Uses the Marsaglia polar method
- * Equivalent to std::normal_distribution i believe
- * @return The sample
- */
-inline Maths::Vector<double, 2> SampleNormalMP(double mu = 0, double sigma = 1) noexcept {
-    double x, y, s;
+/// Converts a pair of uniform samples in the range (0., 1.] into a pair of normally distributed samples with mu=0, sigma=1
+/// \param sample
+/// \return
+static inline Maths::Vector<double, 2> ToNormal(Maths::Vector<double, 2> sample) { return Detail::ToNormalMP(sample); }
+
+}
+
+namespace Maths::Random {
+
+
+/// A linear congruential generator without modulo
+/// \tparam a
+/// \tparam c
+/// \tparam m The value to **and** with, not a modulo
+/// \tparam offset
+template<uint64_t a = 0x5deece66dull, uint64_t c = 11, uint64_t m = (1ull << 48) - 1ull>
+struct LCG {
+    using result_type = uint64_t;
+
+    LCG() noexcept = default;
+
+    explicit LCG(result_type seed) noexcept
+      : stateNew(seed) {}
+
+    template<typename Gen>
+    [[deprecated("not yet implemented")]] explicit LCG(Gen &gen) noexcept(noexcept(gen())) { std::abort(); }
+
+    constexpr void seed(result_type v) noexcept { stateNew = v & m; }
+
+    [[nodiscard("call discard() to discard values")]] constexpr result_type operator()() noexcept { return (stateNew = AdvanceNew(stateNew)); }
+
+    constexpr void discard() noexcept { stateNew = AdvanceNew(stateNew); }
+
+    constexpr result_type max() const noexcept { return m; }
+
+    constexpr result_type min() const noexcept { return 0; }
+
+  private:
+    static const constexpr uint64_t moduloMask = (1ull << 48) - 1ull;
+
+    uint64_t stateNew = 0x330E;
+
+    constexpr static uint64_t AdvanceImpl(std::array<uint16_t, 3> &Xi) noexcept {
+        uint64_t xNext = static_cast<uint64_t>(Xi[2]) << 32 |
+                         static_cast<uint64_t>(Xi[1]) << 16 |
+                         static_cast<uint64_t>(Xi[0]);
+
+        xNext *= a;
+        xNext += c;
+
+        Xi[0] = xNext & 0xFFFF;
+        Xi[1] = (xNext >> 16) & 0xFFFF;
+        Xi[2] = (xNext >> 32) & 0xFFFF;
+
+        return xNext;
+    }
+
+    constexpr static uint64_t AdvanceNew(uint64_t state) noexcept {
+        return (state * a + c) & m;
+    }
+};
+
+struct Erand48Gen {
+    using result_type = double;
+
+    constexpr result_type min() const noexcept { return 0.; }
+
+    constexpr result_type max() const noexcept { return 1.; }
+
+    template<typename Engine>
+    result_type operator()(Engine &engine) const noexcept {
+        constexpr const auto numBits = sizeof(typename Engine::result_type) * 8;
+        static_assert(numBits == 64);
+
+        return std::ldexp(static_cast<double>(engine() & 0xFFFF'FFFF'FFFF), -48);
+    }
+};
+
+namespace Detail {
+
+static thread_local std::random_device rd{};
+static thread_local LCG defaultEngine{rd()};
+static thread_local Erand48Gen defaultNormalGenerator{};
+
+}
+
+static inline double UniformNormalised() { return Detail::defaultNormalGenerator(Detail::defaultEngine); }
+
+static inline Maths::Vector<double, 2> UnitSquare() {
+    return {UniformNormalised(), UniformNormalised()};
+}
+
+namespace Detail {
+
+inline Maths::Vector<double, 2> RejectionSampledUnitDisk() {
+    Maths::Vector<double, 2> sample;
 
     do {
-        x = RandomDoubleEps() * 2. - 1.;
-        y = RandomDoubleEps() * 2. - 1.;
-        s = x * x + y * y;
-    } while (s >= 1. || s == 0.);
+        sample = UnitSquare();
+    } while (sample[0] * sample[0] + sample[1] * sample[1] >= 1);
 
-    s = std::sqrt(-2. * log(s) / s);
-    return {mu + sigma * x * s, mu + sigma * y * s};
+    return sample;
 }
 
-/**
- * Equivalent to SampleNormalMP(muN/muD, sigmaN/sigmaD) where all template params are cast to doubles
- * @tparam muN numerator for mu
- * @tparam muD denominator for mu
- * @tparam sigmaN numerator for sigma
- * @tparam sigmaD denominator for sigma
- * @return
- */
-template<long muN, long muD, long sigmaN, long sigmaD>
-inline Maths::Vector<double, 2> SampleNormalMPCE() noexcept {
-    constexpr double mu = static_cast<double>(muN) / static_cast<double>(muD);
-    constexpr double sigma = static_cast<double>(sigmaN) / static_cast<double>(sigmaD);
+}
 
-    double x, y, s;
+static inline Maths::Vector<double, 2> UnitDisk() { return Detail::RejectionSampledUnitDisk(); }
+
+static inline Maths::Vector<double, 2> NormalPair() { return Conv::ToNormal(UnitSquare()); }
+
+static inline double Normal() {
+    static thread_local bool b = true;
+    static thread_local Maths::Vector<double, 2> mem{NormalPair()};
+
+    const auto ret = mem[!b];
+    if (!b) mem = NormalPair();
+    return ret;
+}
+
+static inline Maths::Vector<double, 3> UnitVector() {
+    double x_1, x_2;
 
     do {
-        x = RandomDoubleEps() * 2. - 1.;
-        y = RandomDoubleEps() * 2. - 1.;
-        s = x * x + y * y;
-    } while (s >= 1. || s == 0.);
+        x_1 = UniformNormalised() * 2. - 1.;
+        x_2 = UniformNormalised() * 2. - 1.;
+    } while (x_1 * x_1 + x_2 * x_2 >= 1);
 
-    s = std::sqrt(-2. * log(s) / s);
-    return {mu + sigma * x * s, mu + sigma * y * s};
-}
+    const auto rhs = std::sqrt(1. - x_1 * x_1 - x_2 * x_2);
+    const auto x = 2. * x_1 * rhs;
+    const auto y = 2. * x_2 * rhs;
+    const auto z = 1. - 2. * (x_1 * x_1 + x_2 * x_2);
 
-inline Maths::Vector<double, 2> SampleSNDNormalMP() noexcept { return SampleNormalMP(); }
-
-inline Maths::Vector<double, 3> D3RandomUnitVector() {
-    auto ImplUniform = []() -> Maths::Vector<double, 3> {
-        double x_1, x_2;
-
-        do {
-            x_1 = RandomDouble() * 2. - 1.;
-            x_2 = RandomDouble() * 2. - 1.;
-        } while (x_1 * x_1 + x_2 * x_2 >= 1);
-
-        const auto rhs = std::sqrt(1. - x_1 * x_1 - x_2 * x_2);
-        const auto x = 2. * x_1 * rhs;
-        const auto y = 2. * x_2 * rhs;
-        const auto z = 1. - 2. * (x_1 * x_1 + x_2 * x_2);
-
-        return {x, y, z};
-    };
-
-    return ImplUniform();
+    return {x, y, z};
 }
 
 }

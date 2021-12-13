@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bvh.hpp"
+#include "traversal.hpp"
 
 namespace Gfx::BVH::Detail {
 
@@ -12,7 +12,29 @@ struct ThinBVHNode {
 
 template<typename ShapeT = void>
 struct ThinBVHTree final : public ShapeStore {
-    typedef typename FatBVHNode<ShapeT>::shape_t shape_t;
+    typedef typename Shape::boundable_shape_t<ShapeT> shape_t;
+
+    explicit ThinBVHTree(const TraversableBVHTree <ShapeT> &tree) {
+        const auto &root = dynamic_cast<const TraversableBVHNode<ShapeT> &>(tree.Root());
+
+        shapes.reserve(root.GetShapes().size());
+
+        root.template Traverse<Detail::TraversalOrder::BreadthFirst>([this](const auto &n, std::size_t stackDepth) {
+            const auto &node = dynamic_cast<const TraversableBVHNode<ShapeT> &>(n);
+
+            const std::size_t start = shapes.size();
+            auto nodeShapes = node.GetShapes();
+            std::copy(nodeShapes.begin(), nodeShapes.end(), std::back_inserter(shapes));
+            const std::size_t end = shapes.size();
+
+            const std::size_t lhsChild = nodes.size() + stackDepth + 1;
+            nodes.push_back({
+                              .shapeExtents = {start, end},
+                              .extents = node.GetExtents(),
+                              .children = {lhsChild, lhsChild + 1}
+                            });
+        });
+    }
 
     std::vector<shape_t> shapes{};
     std::vector<ThinBVHNode> nodes{};
@@ -29,11 +51,11 @@ struct ThinBVHTree final : public ShapeStore {
             callStack.pop();
             const auto &node = nodes[current];
 
-            if constexpr (Gfx::ProgramConfig::EmbedRayStats) ++boundChecks;
+            if constexpr (Gfx::ProgramConfig::embedRayStats) ++boundChecks;
             if (!Shape::AABox::EIntersects(node.extents, ray)) continue;
 
             if (const auto[seMin, seMax] = node.shapeExtents; seMax - seMin) {
-                if constexpr (Gfx::ProgramConfig::EmbedRayStats) shapeChecks += seMax - seMin;
+                if constexpr (Gfx::ProgramConfig::embedRayStats) shapeChecks += seMax - seMin;
                 Intersection::Replace(
                   best,
                   Shape::IntersectLinear(ray, shapes.cbegin() + seMin, shapes.cbegin() + seMax)
@@ -48,47 +70,5 @@ struct ThinBVHTree final : public ShapeStore {
     }
 
 };
-
-}
-
-namespace Gfx::BVH {
-
-namespace Detail {
-
-template<typename ShapeT>
-std::shared_ptr<ThinBVHTree<ShapeT>> FatToThin(const TraversableBVHNode<ShapeT> &root) {
-    std::vector<typename TraversableBVHNode<ShapeT>::shape_t> shapes;
-    shapes.reserve(root.GetShapes().size());
-    std::vector<Detail::ThinBVHNode> nodes;
-
-    root.template Traverse<Detail::TraversalOrder::BreadthFirst>([&nodes, &shapes](const auto &n, std::size_t stackDepth) {
-        const auto &node = dynamic_cast<const TraversableBVHNode<ShapeT> &>(n);
-
-        const std::size_t start = shapes.size();
-        auto nodeShapes = node.GetShapes();
-        std::copy(nodeShapes.begin(), nodeShapes.end(), std::back_inserter(shapes));
-        const std::size_t end = shapes.size();
-
-        const std::size_t lhsChild = nodes.size() + stackDepth + 1;
-        nodes.push_back({
-                          .shapeExtents = {start, end},
-                          .extents = node.GetExtents(),
-                          .children = {lhsChild, lhsChild + 1}
-                        });
-    });
-
-    auto p = std::make_shared<Detail::ThinBVHTree<ShapeT>>();
-    p->shapes = std::move(shapes);
-    p->nodes = std::move(nodes);
-
-    return p;
-}
-
-}
-
-template<typename ShapeT = void>
-std::shared_ptr<Detail::ThinBVHTree<ShapeT>> FatToThin(const TraversableBVHTree<ShapeT> &tree) {
-    return Detail::FatToThin<ShapeT>(dynamic_cast<const TraversableBVHNode<ShapeT> &>(tree.Root()));
-}
 
 }

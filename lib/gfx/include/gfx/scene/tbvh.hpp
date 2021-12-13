@@ -1,10 +1,10 @@
 #pragma once
 
-#include "bvh.hpp"
+#include "tree.hpp"
 
 namespace Gfx::BVH::Detail {
 
-template<typename ShapeT = void>
+template<typename ShapeT = void, bool MT = true>
 class ThreadedBVH final : public ShapeStore {
     struct Node {
         std::array<std::size_t, 2> shapeExtents{};
@@ -36,7 +36,6 @@ class ThreadedBVH final : public ShapeStore {
         using node_t = ThreadableBVHNode<ShapeT>;
         auto &root = dynamic_cast<ThreadableBVHNode<ShapeT> &>(tree.Root());
 
-        //shapes.reserve(tree.GetShapes(root).size());
         extents = root.GetExtents();
         std::size_t nodeCount = 0;
         root.template Traverse<TraversalOrder::PreOrder>([this, &nodeCount](auto &n) {
@@ -53,12 +52,7 @@ class ThreadedBVH final : public ShapeStore {
             nodes.push_back({{start, end}, node.GetExtents()});
         });
 
-        for (std::size_t i = 0; i < 6; i++) {
-            root.template Traverse<TraversalOrder::PreOrder>([axis = static_cast<MajorAxis>(i)](auto &n) {
-                auto &node = dynamic_cast<node_t &>(n);
-                node.ReorderChildren(axis);
-            });
-
+        auto GenerateLinks = [&root, nodeCount]() -> std::vector<link_t> {
             std::vector<link_t> tLinks(nodeCount);
             root.template Traverse<TraversalOrder::PreOrder>([&tLinks](auto &n) {
                 auto &node = dynamic_cast<node_t &>(n);
@@ -68,8 +62,19 @@ class ThreadedBVH final : public ShapeStore {
                 else hit = dynamic_cast<const node_t *>(node.Left())->GetID();
                 tLinks[node.GetID()] = {hit, miss};
             });
+            return tLinks;
+        };
 
-            linksLists[i] = tLinks;
+        if constexpr (MT) {
+            for (std::size_t i = 0; i < 6; i++) {
+                root.template Traverse<TraversalOrder::PreOrder>([axis = static_cast<MajorAxis>(i)](auto &n) {
+                    auto &node = dynamic_cast<node_t &>(n);
+                    node.ReorderChildren(axis);
+                });
+                linksLists[i] = GenerateLinks();
+            }
+        } else {
+            linksLists[0] = GenerateLinks();
         }
     }
 
@@ -84,21 +89,22 @@ class ThreadedBVH final : public ShapeStore {
         std::optional<Intersection> best = std::nullopt;
 
         const auto axis = static_cast<std::size_t>(ray.majorDirection);
-        const auto &linksList = linksLists[axis];
+        const auto &linksList = linksLists[MT ? axis : 0];
 
-        for (std::size_t pos = 0; pos != npos;) {
+        for (std::size_t pos = 0; /*pos != npos*/ pos < linksList.size();) {
             const auto &node = nodes[pos];
             const auto &links = linksList[pos];
-            if constexpr (Gfx::ProgramConfig::EmbedRayStats) ++boundChecks;
+            if constexpr (Gfx::ProgramConfig::embedRayStats) ++boundChecks;
             if (Gfx::Shape::AABox::EIntersects(node.extents, ray)) {
                 if (const auto[seMin, seMax] = node.shapeExtents; seMax - seMin) {
-                    if constexpr (Gfx::ProgramConfig::EmbedRayStats) shapeChecks += seMax - seMin;
+                    if constexpr (Gfx::ProgramConfig::embedRayStats) shapeChecks += seMax - seMin;
                     Intersection::Replace(
                       best,
                       Shape::IntersectLinear(ray, shapes.cbegin() + seMin, shapes.cbegin() + seMax)
                     );
                 }
-                pos = links[0];
+                if constexpr (MT) pos = links[0];
+                else ++pos;
             } else {
                 pos = links[1];
             }

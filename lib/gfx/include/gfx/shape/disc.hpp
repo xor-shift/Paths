@@ -1,8 +1,9 @@
 #pragma once
 
 #include "shape.hpp"
-
 #include "plane.hpp"
+
+#include <maths/matvec.hpp>
 
 namespace Gfx::Shape {
 
