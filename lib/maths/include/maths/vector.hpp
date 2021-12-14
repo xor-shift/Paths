@@ -38,6 +38,7 @@ struct VecCrossProduct : public VectorExpr<typename E0::value_type, VecCrossProd
       : e0(e0), e1(e1) {}
 
     [[nodiscard]] constexpr auto operator[](size_t idx) const noexcept {
+        //return e0[(idx + 1) % 3] * e1[(idx + 2) % 3] - e0[(idx + 2) % 3] * e1[(idx + 1) % 3];
         if (idx == 0) return e0[1] * e1[2] - e0[2] * e1[1];
         else if (idx == 1) return e0[2] * e1[0] - e0[0] * e1[2];
         else return e0[0] * e1[1] - e0[1] * e1[0];

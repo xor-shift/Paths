@@ -111,15 +111,16 @@ struct Erand48Gen {
         constexpr const auto numBits = sizeof(typename Engine::result_type) * 8;
         static_assert(numBits == 64);
 
-        return std::ldexp(static_cast<double>(engine() & 0xFFFF'FFFF'FFFF), -48);
+        //return std::ldexp(static_cast<double>(engine() & 0xFFFF'FFFF'FFFF), -48);
+        return static_cast<double>(engine() & 0xFFFF'FFFF'FFFF) * std::pow<double>(2, -48);
     }
 };
 
 namespace Detail {
 
-static thread_local std::random_device rd{};
+static std::random_device rd{};
 static thread_local LCG defaultEngine{rd()};
-static thread_local Erand48Gen defaultNormalGenerator{};
+static Erand48Gen defaultNormalGenerator{};
 
 }
 

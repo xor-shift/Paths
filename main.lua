@@ -108,7 +108,7 @@ local function doLog(conf, stats)
     )
 end
 
-local modelToLoad = 1
+local modelToLoad = 0
 local model
 if modelToLoad == 0 then
     model = store.newLinearTriFromSTL(
@@ -290,7 +290,7 @@ if benchmark then
     conf.samplesToTake = 64
     conf.printProgress = true
     conf.resolution = dim2d.new({ 1920, 1080 })
-    conf.outputFile = true
+    conf.outputFile = false
     conf.normaliseOutput = true
     conf.outFilename = ""
 
@@ -308,7 +308,7 @@ else
     conf.flatteningMethod = 2
     conf.treeDepth = 22
     conf.treeMinShapes = 8
-    conf.samplesToTake = 256
+    conf.samplesToTake = 1
     conf.printProgress = true
     conf.resolution = dim2d.new({ 3840, 2160 }) / 4
     conf.outputFile = true

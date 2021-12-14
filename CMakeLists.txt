@@ -109,7 +109,7 @@ add_library(${PATHS_LIB_NAME} STATIC
         lib/gfx/src/gfx/camera.cpp
         lib/gfx/include/gfx/color.hpp
         lib/gfx/include/gfx/common.hpp
-        lib/gfx/include/gfx/material.hpp
+        lib/gfx/include/gfx/material/material.hpp
         lib/gfx/include/gfx/ray.hpp
         )
 

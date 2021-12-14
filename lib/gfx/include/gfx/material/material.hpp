@@ -1,8 +1,26 @@
 #pragma once
 
-#include "common.hpp"
+#include <gfx/common.hpp>
+#include <gfx/color.hpp>
 
 namespace Gfx {
+
+struct BRDFParams {
+};
+
+struct BSDF {
+    virtual ~BSDF() = default;
+
+    virtual bool ShouldPickWO() = 0;
+
+    virtual Point PickWO() { return {}; }
+
+    virtual Real PDF(Point intersectionPoint, Point wi, Point wo) { return 0.; }
+};
+
+struct NewMaterial {
+
+};
 
 struct Material {
     Real reflectance{}; //1 means perfect mirror

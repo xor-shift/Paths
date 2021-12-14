@@ -3,7 +3,7 @@
 #include <gfx/common.hpp>
 #include <gfx/ray.hpp>
 #include <gfx/shape/shapes.hpp>
-#include <gfx/material.hpp>
+#include "gfx/material/material.hpp"
 
 #include "store.hpp"
 

@@ -34,6 +34,18 @@ struct ThinBVHTree final : public ShapeStore {
                               .children = {lhsChild, lhsChild + 1}
                             });
         });
+
+        ///TODO: use memoization here, for the (per-node current) depth calculations
+        root.template Traverse<Detail::TraversalOrder::PreOrder>([this](const auto &n) {
+            std::size_t currentDepth = 0;
+            const auto *current = std::addressof(n);
+            while (current->Parent()) {
+                ++currentDepth;
+                current = current->Parent();
+            }
+
+            maxDepth = std::max(maxDepth, currentDepth);
+        });
     }
 
     std::vector<shape_t> shapes{};
@@ -41,34 +53,41 @@ struct ThinBVHTree final : public ShapeStore {
 
   protected:
     [[nodiscard]] std::optional<Intersection> IntersectImpl(Ray ray, std::size_t &boundChecks, std::size_t &shapeChecks) const noexcept override {
-        std::stack<std::size_t> callStack{};
-        callStack.push(0);
+        std::vector<std::size_t> callStack(maxDepth + 1, 0);
+        auto stackPointer = callStack.begin();
+        *stackPointer++ = 0;
 
         std::optional<Intersection> best{};
 
-        while (!callStack.empty()) {
-            const auto current = callStack.top();
-            callStack.pop();
+        while (stackPointer != callStack.begin()) {
+            const auto current = *(stackPointer - 1);
+            --stackPointer;
             const auto &node = nodes[current];
 
             if constexpr (Gfx::ProgramConfig::embedRayStats) ++boundChecks;
             if (!Shape::AABox::EIntersects(node.extents, ray)) continue;
 
-            if (const auto[seMin, seMax] = node.shapeExtents; seMax - seMin) {
-                if constexpr (Gfx::ProgramConfig::embedRayStats) shapeChecks += seMax - seMin;
-                Intersection::Replace(
-                  best,
-                  Shape::IntersectLinear(ray, shapes.cbegin() + seMin, shapes.cbegin() + seMax)
-                );
-            } else {
-                callStack.push(node.children[1]);
-                callStack.push(node.children[0]);
+            const auto[shapesStart, shapesEnd] = node.shapeExtents;
+            const auto shapesCount = shapesEnd - shapesStart;
+
+            if (!shapesCount) {
+                *stackPointer++ = node.children[1];
+                *stackPointer++ = node.children[0];
+                continue;
             }
+
+            if constexpr (Gfx::ProgramConfig::embedRayStats) shapeChecks += shapesCount;
+            const auto newIsection = Shape::IntersectLinear(ray, shapes.cbegin() + shapesStart, shapes.cbegin() + shapesEnd);
+            Intersection::Replace(best, newIsection);
         }
 
         return best;
     }
 
+
+
+  private:
+    std::size_t maxDepth = 0;
 };
 
 }
