@@ -7,28 +7,20 @@ set(CMAKE_CXX_STANDARD 23)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(CONAN_COMPILER clang)
-    set(CONAN_COMPILER_VERSION 13)
-
-    #set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -mllvm -asan-use-private-alias=1")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CONAN_COMPILER gcc)
-    set(CONAN_COMPILER_VERSION 11.1)
 else ()
 endif ()
 
+set(CONAN_COMPILER_VERSION ${CMAKE_CXX_COMPILER_VERSION})
+
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
-
-#find_package(OpenMP REQUIRED)
-
-#set(PATHS_USE_POLLY)
 
 ### FLAGS ###
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wall -Wextra -Wno-nonnull")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-gnu-zero-variadic-macro-arguments")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -mtune=native -funsafe-math-optimizations")
 if ((CMAKE_BUILD_TYPE MATCHES Debug) OR (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo))
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined")
@@ -44,85 +36,94 @@ set(PATHS_BENCH_NAME ${PROJECT_NAME}Bench)
 
 ### LIB ###
 
-add_library(${PATHS_LIB_NAME}_Maths STATIC
-        lib/maths/include/maths/maths.hpp
-        lib/maths/include/maths/matrix.hpp
-        lib/maths/include/maths/matvec.hpp
-        lib/maths/include/maths/rand.hpp
-        lib/maths/include/maths/vector.hpp)
-target_include_directories(${PATHS_LIB_NAME}_Maths PUBLIC lib/maths/include)
-set_target_properties(${PATHS_LIB_NAME}_Maths PROPERTIES LINKER_LANGUAGE CXX)
-target_compile_options(${PATHS_LIB_NAME}_Maths INTERFACE -fno-exceptions)
-target_compile_options(${PATHS_LIB_NAME}_Maths INTERFACE -fno-exceptions)
-
-add_library(${PATHS_LIB_NAME}_Utils INTERFACE
-        lib/utils/include/utils/buf_chan.hpp
-        lib/utils/include/utils/circular_buffer.hpp
-        lib/utils/include/utils/pointer_iterator.hpp
-        lib/utils/include/utils/spin_lock.hpp
-        lib/utils/include/utils/utils.hpp
-        lib/utils/include/utils/wait_group.hpp
-        lib/utils/include/utils/worker_pool.hpp)
-target_include_directories(${PATHS_LIB_NAME}_Utils INTERFACE lib/utils/include)
-target_compile_options(${PATHS_LIB_NAME}_Utils INTERFACE -fno-exceptions)
-
 add_library(${PATHS_LIB_NAME} STATIC
         thirdparty/lodepng/lodepng.cpp
         thirdparty/tinyexr/tinyexr.cc
 
-        lib/gfx/include/gfx/image/exporters/exr.hpp
-        lib/gfx/include/gfx/image/exporters/png.hpp
-        lib/gfx/include/gfx/image/filter.hpp
-        lib/gfx/include/gfx/image/image.hpp
-        lib/gfx/src/image/exporters/exr.cpp
-        lib/gfx/src/image/exporters/png.cpp
+        Lib/Include/Maths/Maths.hpp
+        Lib/Include/Maths/Matrix.hpp
+        Lib/Include/Maths/MatVec.hpp
+        Lib/Include/Maths/Random.hpp
+        Lib/Include/Maths/Vector.hpp
 
-        lib/gfx/include/gfx/integrator/albedo.hpp
-        lib/gfx/include/gfx/integrator/averager.hpp
-        lib/gfx/include/gfx/integrator/integrator.hpp
-        lib/gfx/include/gfx/integrator/mc.hpp
-        lib/gfx/include/gfx/integrator/sampler_wrapper.hpp
-        lib/gfx/include/gfx/integrator/stat.hpp
-        lib/gfx/include/gfx/integrator/stub_integrator.hpp
-        lib/gfx/include/gfx/integrator/whitted.hpp
-        lib/gfx/src/gfx/integrator/albedo.cpp
-        lib/gfx/src/gfx/integrator/averager.cpp
-        lib/gfx/src/gfx/integrator/mc.cpp
-        lib/gfx/src/gfx/integrator/stat.cpp
-        lib/gfx/src/gfx/integrator/whitted.cpp
+        Lib/Include/Utils/BufferedChannel.hpp
+        Lib/Include/Utils/CircularBuffer.hpp
+        Lib/Include/Utils/PointerIterator.hpp
+        Lib/Include/Utils/SpinLock.hpp
+        Lib/Include/Utils/Utils.hpp
+        Lib/Include/Utils/WaitGroup.hpp
+        Lib/Include/Utils/WorkerPool.hpp
 
-        lib/gfx/include/gfx/scene/tree.hpp
-        lib/gfx/include/gfx/scene/scene.hpp
-        lib/gfx/include/gfx/scene/store.hpp
-        lib/gfx/include/gfx/scene/tbvh.hpp
-        lib/gfx/include/gfx/scene/thinbvh.hpp
-        lib/gfx/include/gfx/scene/traversal.hpp
+        Lib/Include/Paths/Image/Exporters/EXRExporter.hpp
+        Lib/Include/Paths/Image/Exporters/PNGExporter.hpp
+        Lib/Include/Paths/Image/Filter.hpp
+        Lib/Include/Paths/Image/Image.hpp
+        Lib/Src/Paths/Image/Exporters/EXRExporter.cpp
+        Lib/Src/Paths/Image/Exporters/PNGExporter.cpp
 
-        lib/gfx/include/gfx/shape/shape.hpp
-        lib/gfx/include/gfx/shape/shapes.hpp
+        Lib/Include/Paths/Integrator/Sampler/Albedo.hpp
+        Lib/Include/Paths/Integrator/Averager.hpp
+        Lib/Include/Paths/Integrator/Integrator.hpp
+        Lib/Include/Paths/Integrator/Sampler/MonteCarlo.hpp
+        Lib/Include/Paths/Integrator/Sampler/SamplerWrapper.hpp
+        Lib/Include/Paths/Integrator/Sampler/Statistics.hpp
+        Lib/Include/Paths/Integrator/Sampler/Whitted.hpp
+        Lib/Src/Paths/Integrator/Sampler/Albedo.cpp
+        Lib/Src/Paths/Integrator/Averager.cpp
+        Lib/Src/Paths/Integrator/Sampler/MonteCarlo.cpp
+        Lib/Src/Paths/Integrator/Sampler/Statistics.cpp
+        Lib/Src/Paths/Integrator/Sampler/Whitted.cpp
 
-        lib/gfx/include/gfx/stl/binary.hpp
-        lib/gfx/src/gfx/stl/binary.cpp
-        lib/gfx/include/gfx/stl/common.hpp
+        Lib/Include/Paths/Scene/Tree.hpp
+        Lib/Include/Paths/Scene/Scene.hpp
+        Lib/Include/Paths/Scene/Store.hpp
+        Lib/Include/Paths/Scene/TBVH.hpp
+        Lib/Include/Paths/Scene/ThinBVH.hpp
+        Lib/Include/Paths/Scene/Traversal.hpp
 
-        lib/gfx/include/gfx/camera.hpp
-        lib/gfx/src/gfx/camera.cpp
-        lib/gfx/include/gfx/color.hpp
-        lib/gfx/include/gfx/common.hpp
-        lib/gfx/include/gfx/material/material.hpp
-        lib/gfx/include/gfx/ray.hpp
+        Lib/Include/Paths/Shape/Shape.hpp
+        Lib/Include/Paths/Shape/Shapes.hpp
+
+        Lib/Include/Paths/Lua/Lua.hpp
+        Lib/Include/Paths/Lua/LuaCompat.hpp
+        Lib/Src/Paths/Lua/Lua.cpp
+        Lib/Src/Paths/Lua/LuaCompat$Camera.cpp
+        Lib/Src/Paths/Lua/LuaCompat$Image.cpp
+        Lib/Src/Paths/Lua/LuaCompat$Integrator.cpp
+        Lib/Src/Paths/Lua/LuaCompat$Matrix.cpp
+        Lib/Src/Paths/Lua/LuaCompat$Ray.cpp
+        Lib/Src/Paths/Lua/LuaCompat$Scene.cpp
+        Lib/Src/Paths/Lua/LuaCompat$Store.cpp
+        Lib/Src/Paths/Lua/LuaCompat$Vector.cpp
+
+        Lib/Include/Paths/STL/Binary.hpp
+        Lib/Include/Paths/STL/Common.hpp
+        Lib/Src/Paths/STL/Binary.cpp
+
+        Lib/Include/Paths/Camera.hpp
+        Lib/Src/Paths/Camera.cpp
+        Lib/Include/Paths/Color.hpp
+        Lib/Include/Paths/Common.hpp
+        Lib/Include/Paths/Material/material.hpp
+        Lib/Include/Paths/Ray.hpp
         )
 
-foreach (shape aabox disc plane sphere triangle)
-    target_sources(${PATHS_LIB_NAME} PUBLIC lib/gfx/include/gfx/shape/${shape}.hpp)
+foreach (shape AxisAlignedBox Disc Plane Sphere Triangle)
+    target_sources(${PATHS_LIB_NAME} PUBLIC Lib/Include/Paths/Shape/${shape}.hpp)
 endforeach ()
 
+file(GLOB lua_compat_files "Lib/Src/Paths/Lua/LuaCompat$*.cpp")
+foreach(file ${lua_compat_files})
+    set_source_files_properties(${file} PROPERTIES COMPILE_FLAGS -fexceptions)
+endforeach()
+set_source_files_properties(Lib/Src/Paths/Lua/Lua.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
+
 target_include_directories(${PATHS_LIB_NAME} PUBLIC
-        lib/gfx/include
+        Lib/Include
         thirdparty/lodepng
         thirdparty/tinyexr)
 conan_target_link_libraries(${PATHS_LIB_NAME})
-target_link_libraries(${PATHS_LIB_NAME} ${PATHS_LIB_NAME}_Maths ${PATHS_LIB_NAME}_Utils pthread omp fmt)
+target_link_libraries(${PATHS_LIB_NAME} pthread omp fmt)
 target_compile_options(${PATHS_LIB_NAME} PUBLIC -fno-exceptions)
 
 ### TESTS ###
@@ -130,14 +131,14 @@ target_compile_options(${PATHS_LIB_NAME} PUBLIC -fno-exceptions)
 add_subdirectory(thirdparty/googletest)
 
 add_executable(${PATHS_TESTS_NAME}
-        tests/test_test.cpp
-        tests/test_maths.cpp
-        tests/test_prng.cpp)
+        Paths/Tests/test_test.cpp
+        Paths/Tests/test_maths.cpp
+        Paths/Tests/test_prng.cpp)
 target_include_directories(${PATHS_TESTS_NAME} PUBLIC thirdparty/googletest/googletest/include)
 target_link_libraries(${PATHS_TESTS_NAME} ${PATHS_LIB_NAME} gtest gtest_main)
 
 add_executable(${PATHS_TESTS_NAME}_distrib
-        tests/distribTest.cpp)
+        Paths/Tests/distribTest.cpp)
 target_link_libraries(${PATHS_TESTS_NAME}_distrib ${PATHS_LIB_NAME})
 
 
@@ -146,34 +147,18 @@ target_link_libraries(${PATHS_TESTS_NAME}_distrib ${PATHS_LIB_NAME})
 add_subdirectory(thirdparty/benchmark)
 
 add_executable(${PATHS_BENCH_NAME}
-        benchmarks/rand.cpp)
+        Paths/Benchmarks/rand.cpp)
 target_include_directories(${PATHS_BENCH_NAME} PUBLIC thirdparty/benchmark/include)
 target_link_libraries(${PATHS_BENCH_NAME} ${PATHS_LIB_NAME} benchmark)
 
 ### MAIN ###
 
-add_executable(${PATHS_EXEC_NAME}
-        paths/main.cpp)
-target_include_directories(${PATHS_EXEC_NAME} PUBLIC
-        lib/gfx/include)
+add_executable(${PATHS_EXEC_NAME} Paths/Main/main.cpp)
+target_include_directories(${PATHS_EXEC_NAME} PUBLIC Lib/Include)
 
-target_sources(${PATHS_EXEC_NAME} PUBLIC
-        paths/lua.hpp
-        paths/lua.cpp
-
-        paths/luaCompat.hpp
-        )
-foreach (compatFile camera image integrator matrix scene store vector ray)
-    set(compatFile paths/luaCompat\$${compatFile}.cpp)
-    set_source_files_properties(${compatFile} PROPERTIES COMPILE_FLAGS -fexceptions)
-    #set_source_files_properties(${compatFile} PROPERTIES COMPILE_FLAGS -Wno-nonnull)
-    target_sources(${PATHS_EXEC_NAME} PUBLIC ${compatFile})
-endforeach ()
-set_source_files_properties(paths/lua.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
 conan_target_link_libraries(${PATHS_EXEC_NAME})
-target_link_libraries(${PATHS_EXEC_NAME} ${PATHS_LIB_NAME}_Maths ${PATHS_LIB_NAME})
+target_link_libraries(${PATHS_EXEC_NAME} ${PATHS_LIB_NAME})
 target_compile_options(${PATHS_EXEC_NAME} PUBLIC
         -fno-exceptions
         -fopenmp)
-set_source_files_properties(paths/lua.cpp PROPERTIES COMPILE_FLAGS -fexceptions)
-conan_target_link_libraries(${PATHS_EXEC_NAME})
+set_source_files_properties(Lib/Src/Paths/Lua/Lua.cpp PROPERTIES COMPILE_FLAGS -fexceptions)

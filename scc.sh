@@ -4,6 +4,6 @@ scc \
   CMakeLists.txt \
   conanfile.py \
   paths/ \
-  lib/ \
+  Lib/ \
   tests/ \
   main.lua

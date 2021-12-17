@@ -36,7 +36,7 @@ TODO: add layout
 - [x] Expression templates for linear algebra
     - [x] Vectors and vector operations
     - [x] Matrices and matrix operations
-    - [x] Vector matrix operations
+    - [x] vector matrix operations
     - [ ] Quaternions?
 - [x] Preview mode (simplified Whitted)
 - [ ] Proper BRDFs and importance sampling (>mfw mathlet) (well i am importance sampling if the BRDF is purely diffuse and samples are uniform, aren't i? checkmate mathheads)

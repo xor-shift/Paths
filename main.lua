@@ -231,9 +231,9 @@ local function doRender(conf)
     scene0:getStoreReference():insertChild(lModel)
 
     local focalIntersection = scene0:castRay(ray.new(origin + cameraOffset, (cameraOffset - modelOffset):normalized()));
-    local focalDistance = (cameraOffset - modelOffset):magnitude()
+    local focalDistance = math.abs(cameraOffset[3] - modelOffset[3]) -- assumes that there's no x difference
     if focalIntersection ~= nil then
-        focalDistance = focalDistance:distance();
+        focalDistance = math.abs(focalIntersection.intersectionPoint[3]);
     end
 
     local cam = camera.new()
@@ -241,7 +241,7 @@ local function doRender(conf)
     cam.resolution = conf.resolution
     cam.fovHint = 50
     cam.focalDistance = focalDistance
-    cam.apertureDiameter = 0.65
+    cam.apertureDiameter = 0.75
     cam:setLookAt(origin + modelOffset + point.new({ 0, 2, 0 }))
 
     local integ = integrator.newSamplerWrapper(conf.integrator)
@@ -308,7 +308,7 @@ else
     conf.flatteningMethod = 2
     conf.treeDepth = 22
     conf.treeMinShapes = 8
-    conf.samplesToTake = 1
+    conf.samplesToTake = 600
     conf.printProgress = true
     conf.resolution = dim2d.new({ 3840, 2160 }) / 4
     conf.outputFile = true

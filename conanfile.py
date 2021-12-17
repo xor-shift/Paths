@@ -7,15 +7,15 @@ class ProjConan(ConanFile):
     }
 
     requires = (
-        #"luajit/2.0.5",
-        "lua/5.4.3",
+        "luajit/2.0.5",
+        #"lua/5.4.3",
         "miniz/2.1.0",
         "sol2/3.2.3",
     )
 
     build_requires = (
-        #"luajit/2.0.5",
-        "lua/5.4.3",
+        "luajit/2.0.5",
+        #"lua/5.4.3",
         "miniz/2.1.0",
         "sol2/3.2.3",
     )
@@ -24,4 +24,5 @@ class ProjConan(ConanFile):
 
     def configure(self):
         self.options["lua"].shared = True
+        self.options["luajit"].shared = True
         pass
